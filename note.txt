@@ -1,0 +1,19 @@
+duration với free trong history, adminId trong revenue, 
+Ng dùng:
+Giặt:
+làm trang nhập mã máy.
+Sau khi nhập mã máy thì sẽ vào trang của máy đưa ra thông tin máy ( tên máy,giặt tối đa bao nhiêu ký, giá) 
+Đợi người dùng đồng ý(thanh toán trừ tiền)
+Gọi tới api của máy giặt, mở máy giặt để người dùng dùng.( của th kia).
+
+xem lịch sử:
+click vào xem lịch sử giặt (gọi tới wash history) hiển thị máy giặt, giờ giặt, thời gian giặt, và giá tiền
+
+admin
+xem doanh thu
+quản lý người dùng
+quản lý máy giặt
+
+
+
+
