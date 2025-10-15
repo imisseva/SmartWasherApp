@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 12, 2025 at 07:23 PM
+-- Generation Time: Oct 15, 2025 at 10:56 AM
 -- Server version: 8.0.41
 -- PHP Version: 8.0.30
 
@@ -91,7 +91,6 @@ CREATE TABLE `daily_revenue` (
 DROP TABLE IF EXISTS `revenue`;
 CREATE TABLE `revenue` (
   `id` int NOT NULL,
-  `admin_id` int NOT NULL,
   `date` date NOT NULL,
   `total_income` decimal(10,2) DEFAULT '0.00',
   `total_washes` int DEFAULT '0',
@@ -164,9 +163,7 @@ CREATE TABLE `wash_history` (
   `requested_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `start_time` datetime DEFAULT NULL,
   `end_time` datetime DEFAULT NULL,
-  `duration_minutes` int DEFAULT '0',
-  `cost` decimal(10,2) DEFAULT '0.00',
-  `free` tinyint(1) DEFAULT '1'
+  `cost` decimal(10,2) DEFAULT '0.00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -201,8 +198,7 @@ ALTER TABLE `admin`
 -- Indexes for table `revenue`
 --
 ALTER TABLE `revenue`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `admin_id` (`admin_id`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `user`
@@ -274,12 +270,6 @@ ALTER TABLE `wash_history`
 --
 ALTER TABLE `admin`
   ADD CONSTRAINT `admin_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`);
-
---
--- Constraints for table `revenue`
---
-ALTER TABLE `revenue`
-  ADD CONSTRAINT `revenue_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`);
 
 --
 -- Constraints for table `user`
