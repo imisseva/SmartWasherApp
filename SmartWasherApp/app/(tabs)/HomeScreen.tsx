@@ -13,7 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import axios from "axios";
+import client from "../../constants/api"; // ✅ dùng axios client chung
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function HomeScreen() {
     fetchUser();
   }, []);
 
-  // ===== Xử lý đăng xuất =====
+  // ===== Đăng xuất =====
   const handleLogout = async () => {
     Alert.alert("Đăng xuất", "Bạn có chắc muốn đăng xuất không?", [
       { text: "Hủy", style: "cancel" },
@@ -46,7 +46,7 @@ export default function HomeScreen() {
     ]);
   };
 
-  // ===== Nhập mã máy giặt =====
+  // ===== Nhập mã máy giặt (dùng Alert.prompt — chỉ chạy trên iOS) =====
   const handleEnterMachine = async () => {
     Alert.prompt(
       "Nhập mã máy giặt",
@@ -54,7 +54,7 @@ export default function HomeScreen() {
       async (machineId) => {
         if (!machineId) return;
         try {
-          const res = await axios.get(`http://192.168.1.81:5000/api/washer/${machineId}`);
+          const res = await client.get(`/api/washer/${machineId}`); // ✅ dùng client
           if (res.data.success) {
             router.push({
               pathname: "/WasherInfo",
@@ -70,7 +70,7 @@ export default function HomeScreen() {
     );
   };
 
-
+  // ===== Modal nhập mã máy =====
   const handleConfirmMachine = async () => {
     if (!machineCode.trim()) {
       Alert.alert("⚠️", "Vui lòng nhập mã máy giặt!");
@@ -78,14 +78,13 @@ export default function HomeScreen() {
     }
 
     try {
-      // Gọi API để lấy thông tin máy
-      const res = await axios.get(`http://192.168.1.81:5000/api/washer/${machineCode}`);
-      if (res.data) {
+      const res = await client.get(`/api/washer/${machineCode}`); // ✅ dùng client
+      if (res.data && res.data.success) {
         setModalVisible(false);
         setMachineCode("");
         router.push({
           pathname: "/WasherInfo",
-          params: { washer: JSON.stringify(res.data) },
+          params: { washer: JSON.stringify(res.data.washer) },
         });
       } else {
         Alert.alert("❌", "Không tìm thấy máy giặt với mã này!");
@@ -95,6 +94,7 @@ export default function HomeScreen() {
     }
   };
 
+  // ===== Quét QR (chưa dùng) =====
   const handleScanQR = () => {
     Alert.alert("📷 Quét mã QR", "Tính năng quét QR đang được phát triển!");
   };
@@ -137,7 +137,7 @@ export default function HomeScreen() {
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={[styles.optionButton, styles.leftButton]}
-          onPress={handleEnterMachine}
+          onPress={() => setModalVisible(true)} // mở modal thay vì Alert.prompt
         >
           <Ionicons name="pricetag-outline" size={50} color="#fff" />
           <Text style={styles.optionText}>Nhập mã máy</Text>
@@ -155,7 +155,7 @@ export default function HomeScreen() {
       <Text style={styles.orText}>Hoặc</Text>
       <Text style={styles.note}>Chọn một trong hai cách để bắt đầu giặt</Text>
 
-      {/* ===== Popup nhập mã máy ===== */}
+      {/* ===== Modal nhập mã máy ===== */}
       <Modal transparent visible={modalVisible} animationType="slide">
         <View style={styles.modalBackground}>
           <View style={styles.modalBox}>
@@ -202,7 +202,13 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 14, color: "#666" },
   username: { fontSize: 18, fontWeight: "700", color: "#333" },
   logoutButton: { backgroundColor: "#4B8BF5", padding: 8, borderRadius: 20 },
-  title: { fontSize: 20, fontWeight: "700", marginBottom: 40, color: "#333", textAlign: "center" },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 40,
+    color: "#333",
+    textAlign: "center",
+  },
   buttonRow: { flexDirection: "row", gap: 16, justifyContent: "center" },
   optionButton: {
     flex: 1,
@@ -214,11 +220,22 @@ const styles = StyleSheet.create({
   },
   leftButton: { backgroundColor: "#3AB0A2" },
   rightButton: { backgroundColor: "#4B8BF5" },
-  optionText: { color: "#fff", fontSize: 16, fontWeight: "600", marginTop: 8 },
-  orText: { fontSize: 16, marginVertical: 30, color: "#555", fontWeight: "500", textAlign: "center" },
+  optionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 8,
+  },
+  orText: {
+    fontSize: 16,
+    marginVertical: 30,
+    color: "#555",
+    fontWeight: "500",
+    textAlign: "center",
+  },
   note: { fontSize: 14, color: "#777", textAlign: "center" },
 
-  // ===== Popup nhập mã =====
+  // ===== Modal nhập mã =====
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -242,7 +259,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 15,
   },
-  modalButtons: { flexDirection: "row", justifyContent: "space-between", width: "100%" },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
   modalBtn: {
     flex: 1,
     marginHorizontal: 5,
