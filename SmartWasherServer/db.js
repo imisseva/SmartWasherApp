@@ -1,19 +1,11 @@
-// db.js
-const mysql = require("mysql2");
+import mysql from "mysql2/promise";
 
-const db = mysql.createConnection({
+const db = await mysql.createConnection({
   host: "localhost",
-  user: "root",         // ⚠️ thay bằng user MySQL của bạn
-  password: "123456",         // ⚠️ nếu có mật khẩu thì điền vào
-  database: "smartwasher",
+  user: "root",
+  password: "123456",
+  database: "smartwasher", // ⚠️ đúng tên trong phpMyAdmin
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error("❌ Lỗi kết nối MySQL:", err);
-  } else {
-    console.log("✅ Kết nối MySQL thành công");
-  }
-});
-
-module.exports = db;
+export default db;
+console.log("✅ Kết nối MySQL thành công!");
