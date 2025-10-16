@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useAuth } from "../../hooks/auth";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import AdminHeader from "../../components/AdminHeader";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -16,9 +16,9 @@ export default function AdminDashboard() {
     }
   }, [user]);
 
-  const goUsers   = () => router.push("../users");
-  const goWashers = () => router.push("../washers");
-  const goRevenue = () => router.push("../revenue");
+  const goUsers   = () => router.push("/admin/users" as Href);
+  const goWashers = () => router.push("/admin/washers" as Href);
+  const goRevenue = () => router.push("/admin/revenue" as Href);
 
   const logout = async () => {
     await signOut();
