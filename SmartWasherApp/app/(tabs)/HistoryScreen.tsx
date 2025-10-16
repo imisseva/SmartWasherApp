@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
+import client from "../../constants/api"; // ✅ Dùng client chung
 
 interface WashHistory {
   id: number;
@@ -27,8 +33,9 @@ export default function HistoryScreen() {
           return;
         }
 
-        // ✅ Gọi API lấy lịch sử giặt theo user_id
-        const res = await axios.get(`http://192.168.1.81:5000/api/history?user_id=${user.id}`);
+        // ✅ Gọi API qua client (constants/api.ts)
+        const res = await client.get(`/api/history?user_id=${user.id}`);
+
         if (Array.isArray(res.data)) {
           setHistory(res.data);
         } else if (res.data.data) {
@@ -38,7 +45,7 @@ export default function HistoryScreen() {
           setHistory([]);
         }
       } catch (err) {
-        console.warn("Không thể kết nối server, hiển thị dữ liệu giả lập");
+        console.warn("⚠️ Không thể kết nối server, hiển thị dữ liệu giả lập");
         setHistory([
           {
             id: 1,
@@ -85,7 +92,9 @@ export default function HistoryScreen() {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#4B8BF5" />
-        <Text style={{ textAlign: "center", marginTop: 10 }}>Đang tải lịch sử...</Text>
+        <Text style={{ textAlign: "center", marginTop: 10 }}>
+          Đang tải lịch sử...
+        </Text>
       </View>
     );
   }
