@@ -51,6 +51,81 @@ app.post("/api/login", (req, res) => {
   });
 });
 
+// === API LƯU LỊCH SỬ GIẶT ===
+app.post("/api/wash-history", (req, res) => {
+  const { user_id, washer_id, cost } = req.body;
+  if (!user_id || !washer_id)
+    return res.json({ success: false, message: "Thiếu thông tin" });
+
+  const sql = `
+    INSERT INTO wash_history (user_id, washer_id, cost)
+    VALUES (?, ?, ?)
+  `;
+  db.query(sql, [user_id, washer_id, cost || 0], (err, result) => {
+    if (err) {
+      console.error("❌ Lỗi lưu lịch sử:", err);
+      return res.json({ success: false, message: "Lỗi lưu dữ liệu" });
+    }
+    console.log(`✅ Lưu lịch sử giặt: user=${user_id}, máy=${washer_id}, tiền=${cost}`);
+    res.json({ success: true });
+  });
+});
+
+// === API ADMIN LẤY LỊCH SỬ GIẶT ===
+app.get("/api/admin/wash-history", (req, res) => {
+  const sql = `
+    SELECT wh.id, u.name AS user_name, w.name AS washer_name, wh.cost, wh.requested_at
+    FROM wash_history wh
+    JOIN user u ON wh.user_id = u.id
+    JOIN washer w ON wh.washer_id = w.id
+    ORDER BY wh.requested_at DESC
+  `;
+  db.query(sql, (err, results) => {
+    if (err) return res.json({ success: false, message: "Lỗi truy vấn" });
+    res.json({ success: true, data: results });
+  });
+});
+
+
+// 🔹 API lấy lịch sử giặt theo người dùng
+app.get("/api/history", (req, res) => {
+  // Lấy user_id từ query, ví dụ: /api/history?user_id=1
+  const userId = req.query.user_id;
+
+  if (!userId) {
+    return res.json({ success: false, message: "Thiếu user_id" });
+  }
+
+  const sql = `
+    SELECT w.id, washer.name AS machineName, w.requested_at AS date, 
+           w.cost, 'Hoàn thành' AS status
+    FROM wash_history w
+    JOIN washer ON w.washer_id = washer.id
+    WHERE w.user_id = ?
+    ORDER BY w.id DESC
+  `;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error("❌ Lỗi MySQL:", err);
+      return res.json({ success: false, message: "Lỗi truy vấn CSDL" });
+    }
+    res.json(results);
+  });
+});
+
+
+
+app.get("/api/washer/:id", (req, res) => {
+  const id = req.params.id;
+  db.query("SELECT * FROM washer WHERE id = ?", [id], (err, results) => {
+    if (err) return res.json({ success: false, message: err.message });
+    if (results.length === 0) return res.json({ success: false, message: "Không tìm thấy máy" });
+    res.json({ success: true, washer: results[0] });
+  });
+});
+
+
 // 🔹 Khởi động server
 app.listen(5000, "0.0.0.0", () => {
   console.log("🚀 Server chạy tại http://192.168.1.81:5000");
