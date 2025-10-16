@@ -106,7 +106,10 @@ export default function HomeScreen() {
       </View>
     );
   }
-
+  const displayName =
+  (user?.name && user.name.trim()) ||  // ưu tiên họ tên
+  user?.account?.username ||           // fallback username
+  "Người dùng";
   return (
     <View style={styles.container}>
       {/* ===== Header ===== */}
@@ -121,8 +124,9 @@ export default function HomeScreen() {
             style={styles.avatar}
           />
           <View>
+            
             <Text style={styles.greeting}>Xin chào 👋</Text>
-            <Text style={styles.username}>{user?.username || "Người dùng"}</Text>
+            <Text style={styles.username}>{displayName}</Text>
           </View>
         </View>
 

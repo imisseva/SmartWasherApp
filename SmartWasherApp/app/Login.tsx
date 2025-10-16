@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { AuthController } from "../controllers/AuthController";
 
 export default function LoginScreen() {
@@ -30,15 +30,15 @@ export default function LoginScreen() {
     try {
       setBusy(true);
       const user = await AuthController.login(username, password);
-
-      // ✅ Điều hướng theo role
-      if (user.account?.role === "admin") {
-        router.replace("/admin");
+      const role = (user as any)?.account?.role?.toLowerCase?.();
+    
+      if (role === "admin") {
+        router.replace("/admin" as Href);
       } else {
-        router.replace("/(tabs)/HomeScreen");
+        router.replace("/(tabs)/HomeScreen" as Href);
       }
     } catch (err: any) {
-      Alert.alert("🚫 Lỗi", err.message || "Đăng nhập thất bại.");
+      Alert.alert("🚫 Lỗi", err?.message || "Đăng nhập thất bại.");
     } finally {
       setBusy(false);
     }
