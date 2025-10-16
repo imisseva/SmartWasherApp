@@ -1,9 +1,17 @@
 import React, { useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  ScrollView,
+} from "react-native";
 import { useAuth } from "../../hooks/auth";
 import { Href, useRouter } from "expo-router";
 import AdminHeader from "../../components/AdminHeader";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context"; // ✅ import SafeAreaView
 
 export default function AdminDashboard() {
   const { user, signOut } = useAuth();
@@ -11,12 +19,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (user && user.role !== "admin") {
-      // Không phải admin -> quay về Home thường
       router.replace("/(tabs)/HomeScreen");
     }
   }, [user]);
 
-  const goUsers   = () => router.push("/admin/users" as Href);
+  const goUsers = () => router.push("/admin/users" as Href);
   const goWashers = () => router.push("/admin/washers" as Href);
   const goRevenue = () => router.push("/admin/revenue" as Href);
 
@@ -26,38 +33,28 @@ export default function AdminDashboard() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "hsl(218, 50%, 91%)" }}>
-      <AdminHeader
-        title="Quản lý"
-        right={
-          <TouchableOpacity onPress={logout}>
-            <Text style={{ color: "#b00", fontWeight: "700" }}>Đăng xuất</Text>
-          </TouchableOpacity>
-        }
-      />
-
+    <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.welcome}>Xin chào, {user?.username}</Text>
+        <AdminHeader
+          title="Quản lý"
+          right={
+            <TouchableOpacity onPress={logout}>
+              <Text style={{ color: "#b00", fontWeight: "700" }}>Đăng xuất</Text>
+            </TouchableOpacity>
+          }
+        />
 
-        <View style={styles.grid}>
-          <DashButton
-            icon="people-outline"
-            label="Người dùng"
-            onPress={goUsers}
-          />
-          <DashButton
-            icon="hardware-chip-outline"
-            label="Máy giặt"
-            onPress={goWashers}
-          />
-          <DashButton
-            icon="bar-chart-outline"
-            label="Doanh thu"
-            onPress={goRevenue}
-          />
-        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.welcome}>Xin chào, {user?.username}</Text>
+
+          <View style={styles.grid}>
+            <DashButton icon="people-outline" label="Người dùng" onPress={goUsers} />
+            <DashButton icon="hardware-chip-outline" label="Máy giặt" onPress={goWashers} />
+            <DashButton icon="bar-chart-outline" label="Doanh thu" onPress={goRevenue} />
+          </View>
+        </ScrollView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -74,15 +71,28 @@ function DashButton({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <Ionicons name={icon} size={28} color="#243b6b" />
       <Text style={styles.cardText}>{label}</Text>
-      <Ionicons name="chevron-forward" size={20} color="#6b7280" style={{ position: "absolute", right: 16, top: 16 }} />
+      <Ionicons
+        name="chevron-forward"
+        size={20}
+        color="#6b7280"
+        style={{ position: "absolute", right: 16, top: 16 }}
+      />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: "hsl(218, 50%, 91%)",
+  },
   container: {
     flex: 1,
+    backgroundColor: "hsl(218, 50%, 91%)",
+  },
+  scrollContent: {
     padding: 18,
+    paddingBottom: Platform.OS === "ios" ? 50 : 30, // tránh bị đè tab
   },
   welcome: {
     fontSize: 16,
