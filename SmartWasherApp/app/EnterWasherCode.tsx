@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import axios from "axios";
+import client from "../constants/api";
 import { useRouter } from "expo-router";
 
 export default function EnterWasherCode() {
@@ -14,7 +14,7 @@ export default function EnterWasherCode() {
     }
 
     try {
-      const res = await axios.get(`http://192.168.1.81:8081/api/washer/${washerId}`);
+  const res = await client.get(`/api/washer/${washerId}`);
       if (res.data.success) {
         router.push({
           pathname: "/HomeScreen",

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import type { Href } from "expo-router";
 import {
   View,
   Text,
@@ -12,9 +11,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import client from "../constants/api"; // <-- dùng axios instance
+import { AuthController } from "../controllers/AuthController";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -31,32 +29,16 @@ export default function LoginScreen() {
 
     try {
       setBusy(true);
-      const res = await client.post("/api/login", {
-        username,
-        password,
-      });
+      const user = await AuthController.login(username, password);
 
-      if (res.data?.success) {
-        const { user, token } = res.data;
-
-        // Lưu user + token (nếu có)
-        await AsyncStorage.setItem("user", JSON.stringify(user));
-        if (token) await AsyncStorage.setItem("token", token);
-
-        // Điều hướng theo rolep
-        if (user?.role === "admin") {
-          router.replace("/admin" as Href);
-        } else {
-          router.replace("/(tabs)/HomeScreen");
-        }
+      // ✅ Điều hướng theo role
+      if (user.account?.role === "admin") {
+        router.replace("/admin");
       } else {
-        Alert.alert("❌", res.data?.message || "Sai tài khoản hoặc mật khẩu!");
+        router.replace("/(tabs)/HomeScreen");
       }
-    } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        (e?.message?.includes("Network") ? "Không thể kết nối tới server." : "Đăng nhập thất bại.");
-      Alert.alert("🚫 Lỗi", msg);
+    } catch (err: any) {
+      Alert.alert("🚫 Lỗi", err.message || "Đăng nhập thất bại.");
     } finally {
       setBusy(false);
     }
@@ -68,7 +50,6 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.screen}>
-        {/* Logo */}
         <View style={styles.logo}>
           <Ionicons name="water-outline" size={80} color="#3D4785" />
         </View>
