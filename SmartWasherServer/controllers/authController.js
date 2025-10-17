@@ -1,6 +1,6 @@
 // controllers/authController.js
 import { getAccountByUsername } from "../models/account.js";
-import { getUserByAccountId } from "../models/User.js";
+import { getUserByAccountId, createAdminUser } from "../models/User.js";
 import jwt from "jsonwebtoken";
 
 export async function login(req, res) {
@@ -59,5 +59,38 @@ export async function login(req, res) {
       success: false,
       message: "Lỗi server",
     });
+  }
+}
+
+export async function register(req, res) {
+  const { username, password, name, email, phone } = req.body;
+  if (!username || !password || !name) {
+    return res.status(400).json({ success: false, message: "Thiếu thông tin đăng ký" });
+  }
+
+  try {
+    // create user + account with default role = 'user'
+    const vm = await createAdminUser({ username, password, role: "user", name, email, phone });
+
+    // generate token for the created account (account_id is present)
+    const token = jwt.sign(
+      { id: vm.account_id, username: username, role: "user" },
+      process.env.JWT_SECRET || "dev-secret",
+      { expiresIn: "1d" }
+    );
+
+    return res.json({ success: true, user: vm, token });
+  } catch (err) {
+    // detailed logging for debugging
+    console.error("❌ Lỗi đăng ký:", err && err.stack ? err.stack : err);
+    try {
+      const safe = { ...req.body };
+      if (safe.password) safe.password = "<redacted>";
+      console.error("Request body:", safe);
+    } catch (e) {}
+    // If duplicate username, model may throw; send 409
+    const message = err?.message || "Lỗi server";
+    const status = /exists/i.test(message) ? 409 : 500;
+    return res.status(status).json({ success: false, message });
   }
 }

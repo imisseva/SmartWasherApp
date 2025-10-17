@@ -1,4 +1,25 @@
 import { listWashers, createWasher, updateWasherLimited, deleteWasher } from "../models/Washer.js";
+import { findWasherByName } from "../models/Washer.js";
+
+export const getWasherByName = async (req, res) => {
+  try {
+    const name = req.query.name;
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Thiếu tên máy giặt" });
+    }
+
+    const washer = await findWasherByName(name.trim());
+    if (!washer) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+    }
+
+    res.json({ success: true, washer });
+  } catch (err) {
+    console.error("getWasherByName error:", err);
+    res.status(500).json({ success: false, message: "Lỗi server" });
+  }
+};
+
 
 export const getWashers = async (_req, res) => {
   try {
@@ -59,3 +80,25 @@ export const deleteWasherCtrl = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to delete washer" });
   }
 };
+
+import { getWasherById as getWasherByIdModel } from "../models/Washer.js";
+
+export const getWasherById = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: "ID không hợp lệ" });
+    }
+
+    const washer = await getWasherByIdModel(id);
+    if (!washer) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+    }
+
+    res.json({ success: true, washer });
+  } catch (e) {
+    console.error("getWasherById error:", e);
+    res.status(500).json({ success: false, message: "Lỗi server khi tìm máy giặt" });
+  }
+};
+

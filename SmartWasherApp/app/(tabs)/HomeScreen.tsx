@@ -46,50 +46,36 @@ export default function HomeScreen() {
     ]);
   };
 
-  // ===== Nhập mã máy giặt (dùng Alert.prompt — chỉ chạy trên iOS) =====
-  const handleEnterMachine = async () => {
-    Alert.prompt(
-      "Nhập mã máy giặt",
-      "Vui lòng nhập ID máy (ví dụ: 1 hoặc 2)",
-      async (machineId) => {
-        if (!machineId) return;
-        try {
-          const res = await client.get(`/api/washer/${machineId}`); // ✅ dùng client
-          if (res.data.success) {
-            router.push({
-              pathname: "/WasherInfo",
-              params: { washer: JSON.stringify(res.data.washer) },
-            });
-          } else {
-            Alert.alert("Không tìm thấy máy", res.data.message);
-          }
-        } catch (err) {
-          Alert.alert("Lỗi", "Không thể kết nối tới server.");
-        }
-      }
-    );
-  };
+  // (Removed Alert.prompt helper — using modal for cross-platform input)
 
   // ===== Modal nhập mã máy =====
   const handleConfirmMachine = async () => {
-    if (!machineCode.trim()) {
+    const input = machineCode.trim();
+    if (!input) {
       Alert.alert("⚠️", "Vui lòng nhập mã máy giặt!");
       return;
     }
 
     try {
-      const res = await client.get(`/api/washer/${machineCode}`); // ✅ dùng client
-      if (res.data && res.data.success) {
+      const isNumeric = /^\d+$/.test(input);
+      let res;
+      if (isNumeric) {
+        res = await client.get(`/api/washer/${input}`);
+      } else {
+        res = await client.get(`/api/washer?name=${encodeURIComponent(input)}`);
+      }
+
+      const washer = res?.data?.washer ?? (Array.isArray(res?.data?.washers) && res.data.washers[0]);
+
+      if (washer) {
         setModalVisible(false);
         setMachineCode("");
-        router.push({
-          pathname: "/WasherInfo",
-          params: { washer: JSON.stringify(res.data.washer) },
-        });
+        router.push({ pathname: "/WasherInfo", params: { washerId: String(washer.id) } });
       } else {
-        Alert.alert("❌", "Không tìm thấy máy giặt với mã này!");
+        Alert.alert("❌", res?.data?.message || "Không tìm thấy máy giặt với mã này!");
       }
-    } catch (err) {
+    } catch (error: any) {
+      console.warn(error);
       Alert.alert("❌ Lỗi", "Không thể kết nối tới server.");
     }
   };
@@ -165,11 +151,11 @@ export default function HomeScreen() {
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>🔢 Nhập mã máy giặt</Text>
             <TextInput
-              placeholder="VD: 1 hoặc 2"
+              placeholder="VD: 1 hoặc Máy giặt 1"
               style={styles.input}
               value={machineCode}
               onChangeText={setMachineCode}
-              keyboardType="numeric"
+              keyboardType="default"
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity

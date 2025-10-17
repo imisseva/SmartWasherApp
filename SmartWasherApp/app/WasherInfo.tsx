@@ -11,6 +11,8 @@ import {
   Platform,
   StyleSheet,
   Alert,
+  ActivityIndicator,
+  DeviceEventEmitter,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Washer } from "../models/Washer";
@@ -18,52 +20,93 @@ import { WasherController } from "../controllers/WasherController";
 
 export default function WasherInfo() {
   const router = useRouter();
-  const { washerId } = useLocalSearchParams();
+  const { washerId } = useLocalSearchParams<{ washerId?: string }>();
   const [washer, setWasher] = useState<Washer | null>(null);
   const [weight, setWeight] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadWasher = async () => {
-      const id = washerId ? Number(washerId) : 1;
-      const data = await WasherController.getWasherById(id);
-      if (!data) Alert.alert("Lỗi", "Không tìm thấy máy giặt!");
-      setWasher(data);
-      setLoading(false);
+      try {
+        const id = washerId && !isNaN(Number(washerId)) ? Number(washerId) : null;
+        if (!id) {
+          Alert.alert("Lỗi", "Không có ID máy giặt hợp lệ!");
+          router.back();
+          return;
+        }
+
+        const data = await WasherController.getWasherById(id);
+        if (!data) {
+          Alert.alert("❌ Không tìm thấy", "Máy giặt không tồn tại hoặc bị xoá.");
+          router.back();
+        } else {
+          setWasher(data);
+        }
+      } catch (err) {
+        console.error("❌ Lỗi lấy máy giặt:", err);
+        Alert.alert("Lỗi", "Không thể kết nối đến máy chủ.");
+        router.back();
+      } finally {
+        setLoading(false);
+      }
     };
+
     loadWasher();
-  }, []);
+  }, [washerId, router]);
 
   const handleCalculate = async () => {
     const kg = parseFloat(weight);
+
     if (!washer) {
       Alert.alert("Lỗi", "Chưa tải thông tin máy giặt");
       return;
     }
+
+    if (washer.status !== "available") {
+      Alert.alert("⚠️ Máy bận", "Máy này hiện đang bận hoặc không hoạt động.");
+      return;
+    }
+
     if (isNaN(kg) || kg <= 0) {
-      Alert.alert("Sai định dạng", "Vui lòng nhập số ký hợp lệ");
+      Alert.alert("Sai định dạng", "Vui lòng nhập số ký hợp lệ, ví dụ: 2.5");
       return;
     }
 
     try {
       const totalCost = await WasherController.calculateAndSaveWash(kg, washer);
+
       Alert.alert(
         "✅ Thành công",
         `Tổng tiền: ${totalCost.toLocaleString()}đ\nLịch sử giặt đã được lưu.`,
-        [{ text: "OK", onPress: () => router.back() }]
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Notify listeners (HistoryScreen) to refresh
+              try {
+                DeviceEventEmitter.emit("historyUpdated");
+              } catch (e: any) {
+                console.warn("Emit historyUpdated failed:", e?.message || e);
+              }
+              router.back();
+            },
+          },
+        ]
       );
     } catch (err: any) {
-      console.error("❌ Lỗi khi lưu lịch sử:", err);
-      Alert.alert("Lỗi", err.message || "Không thể lưu lịch sử giặt");
+      console.error("❌ Lỗi lưu lịch sử:", err);
+      Alert.alert("Lỗi", err.message || "Không thể lưu lịch sử giặt.");
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
-        <Text>Đang tải thông tin máy giặt...</Text>
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#4B8BF5" />
+        <Text style={{ marginTop: 12 }}>Đang tải thông tin máy giặt...</Text>
       </View>
     );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -83,33 +126,23 @@ export default function WasherInfo() {
             <Text style={styles.title}>🧺 Thông tin máy giặt</Text>
 
             <View style={styles.infoBox}>
-              <Text style={styles.label}>Tên máy:</Text>
-              <Text style={styles.value}>{washer?.name}</Text>
-
-              <Text style={styles.label}>Vị trí:</Text>
-              <Text style={styles.value}>{washer?.location}</Text>
-
-              <Text style={styles.label}>Cân nặng tối đa:</Text>
-              <Text style={styles.value}>{washer?.weight} kg</Text>
-
-              <Text style={styles.label}>Giá mỗi lượt:</Text>
-              <Text style={styles.value}>
-                {washer?.price.toLocaleString()}đ
-              </Text>
+              <InfoRow label="Tên máy" value={washer?.name} />
+              <InfoRow label="Vị trí" value={washer?.location} />
+              <InfoRow label="Tải tối đa" value={`${washer?.weight} kg`} />
+              <InfoRow label="Giá mỗi lượt" value={`${washer?.price.toLocaleString()}đ`} />
 
               <Text style={styles.label}>Trạng thái:</Text>
               <Text
                 style={[
                   styles.value,
-                  {
-                    color:
-                      washer?.status === "available" ? "green" : "red",
-                  },
+                  { color: washer?.status === "available" ? "green" : "red" },
                 ]}
               >
                 {washer?.status === "available"
                   ? "Sẵn sàng"
-                  : "Đang chạy / Lỗi"}
+                  : washer?.status === "running"
+                  ? "Đang chạy"
+                  : "Bị lỗi"}
               </Text>
             </View>
 
@@ -134,11 +167,38 @@ export default function WasherInfo() {
   );
 }
 
+function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <>
+      <Text style={styles.label}>{label}:</Text>
+      <Text style={styles.value}>{value ?? "—"}</Text>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
-  scrollContainer: { flexGrow: 1, backgroundColor: "#f5f7fb", paddingBottom: 50 },
-  container: { flex: 1, padding: 20 },
-  backButton: { color: "#4B8BF5", fontWeight: "700", fontSize: 16, marginBottom: 10 },
-  title: { fontSize: 22, fontWeight: "700", textAlign: "center", marginBottom: 20, color: "#000" },
+  scrollContainer: {
+    flexGrow: 1,
+    backgroundColor: "#f5f7fb",
+    paddingBottom: 50,
+  },
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  backButton: {
+    color: "#4B8BF5",
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 20,
+    color: "#000",
+  },
   infoBox: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -149,9 +209,21 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
-  label: { fontWeight: "600", color: "#555" },
-  value: { fontWeight: "700", fontSize: 16, marginBottom: 8 },
-  inputBox: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 20 },
+  label: {
+    fontWeight: "600",
+    color: "#555",
+  },
+  value: {
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  inputBox: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -160,6 +232,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 8,
   },
-  button: { backgroundColor: "#4B8BF5", paddingVertical: 14, borderRadius: 12, alignItems: "center" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  button: {
+    backgroundColor: "#4B8BF5",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });
