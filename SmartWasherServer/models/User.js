@@ -34,39 +34,40 @@ export async function listAdminUsers() {
 
 /** Tạo account + user (transaction) */
 export async function createAdminUser({ username, password, role, name, email, phone }) {
-  const conn = await db.getConnection();
+  const conn = await db.getConnection();     // ✅ Bây giờ có function này
   try {
     await conn.beginTransaction();
 
-    // unique username
-    const [dup] = await conn.execute(`SELECT id FROM account WHERE username=?`, [username]);
-    if (dup.length) {
-      throw new Error("Username already exists");
-    }
-
-    // DEV: lưu plain password theo dữ liệu mẫu (production: dùng bcrypt)
+    // 1) Tạo account
     const [accRes] = await conn.execute(
       `INSERT INTO account (username, password, role) VALUES (?, ?, ?)`,
       [username, password, role]
     );
     const accountId = accRes.insertId;
 
+    // 2) Tạo user profile
     const [userRes] = await conn.execute(
-      `INSERT INTO user (account_id, name, email, phone, total_washes, free_washes_left)
-       VALUES (?, ?, ?, ?, 0, 4)`,
+      `INSERT INTO user (account_id, name, email, phone)
+       VALUES (?, ?, ?, ?)`,
       [accountId, name, email ?? null, phone ?? null]
     );
     const userId = userRes.insertId;
 
-    const [rows] = await conn.execute(
-      `SELECT u.*, a.username, a.role
-       FROM user u JOIN account a ON a.id = u.account_id
-       WHERE u.id = ?`,
-      [userId]
-    );
-
     await conn.commit();
-    return mapRow(rows[0]);
+
+    // 3) Trả về view model (tuỳ bạn)
+    return {
+      id: userId,
+      account_id: accountId,
+      name,
+      email: email ?? null,
+      phone: phone ?? null,
+      total_washes: 0,
+      free_washes_left: 4,
+      created_at: new Date().toISOString(),
+      username,
+      role,
+    };
   } catch (e) {
     await conn.rollback();
     throw e;

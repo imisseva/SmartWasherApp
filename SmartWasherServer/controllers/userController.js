@@ -17,13 +17,13 @@ export const postUser = async (req, res) => {
   try {
     const { username, password, role, name, email, phone } = req.body;
     if (!username || !password || !role || !name) {
-      return res.status(400).json({ success: false, message: "Missing fields" });
+      return res.status(400).json({ success: false, message: "Thiếu dữ liệu bắt buộc" });
     }
-    const user = await createAdminUser({ username, password, role, name, email, phone });
-    res.json({ success: true, user });
+    const vm = await createUserWithAccount({ username, password, role, name, email, phone });
+    res.json({ success: true, user: vm });
   } catch (e) {
-    const code = /exists/i.test(e.message) ? 409 : 500;
-    res.status(code).json({ success: false, message: e.message || "Failed to create user" });
+    console.error("create user error:", e);
+    res.status(500).json({ success: false, message: "Failed to create user" });
   }
 };
 
