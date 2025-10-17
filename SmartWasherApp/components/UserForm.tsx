@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { AdminUserVM, CreateUserDto, UpdateUserDto } from "../controllers/UserController";
 
@@ -16,6 +16,7 @@ export default function UserForm({
   onSubmit: (payload: CreateUserDto | UpdateUserDto) => void;
 }) {
   const isEdit = !!initial;
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState(initial?.username ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"user" | "admin">(initial?.role ?? "user");
@@ -60,7 +61,7 @@ export default function UserForm({
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f5ff" }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={styles.header}>
+  <View style={[styles.header, { paddingTop: insets.top || 12 }]}>
           <TouchableOpacity onPress={onCancel} style={styles.backBtn} hitSlop={8}>
             <Ionicons name="chevron-back" size={24} color="#1f2a44" />
           </TouchableOpacity>

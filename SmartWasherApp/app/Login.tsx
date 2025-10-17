@@ -109,8 +109,12 @@ export default function LoginScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Sign up</Text>
-          <Text style={styles.footerText}>Forgot Password?</Text>
+          <TouchableOpacity onPress={() => router.push("/Register")}>
+            <Text style={[styles.footerText, { color: "#4B8BF5", fontWeight: "700" }]}>Sign up</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert("Quên mật khẩu", "Vui lòng liên hệ admin để đặt lại mật khẩu.") }>
+            <Text style={styles.footerText}>Forgot Password?</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>

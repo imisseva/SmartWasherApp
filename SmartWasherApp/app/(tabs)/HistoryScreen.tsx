@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  DeviceEventEmitter,
 } from "react-native";
 import { HistoryController } from "../../controllers/HistoryController";
 import { WashHistory } from "../../models/WashHistory";
@@ -20,7 +21,15 @@ export default function HistoryScreen() {
       setLoading(false);
     };
     loadHistory();
+    // subscribe to history updates
+    const sub = DeviceEventEmitter.addListener("historyUpdated", () => {
+      setLoading(true);
+      loadHistory();
+    });
+
+    return () => sub.remove();
   }, []);
+  
 
   const renderItem = ({ item }: { item: WashHistory }) => (
     <View style={styles.card}>

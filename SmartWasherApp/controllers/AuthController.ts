@@ -59,6 +59,32 @@ export const AuthController = {
     }
   },
 
+  async register(payload: { username: string; password: string; name: string; email?: string; phone?: string }) {
+    try {
+      const res = await client.post("/api/register", payload);
+      if (!res.data?.success) throw new Error(res.data?.message || "Đăng ký thất bại");
+      const { user: raw, token } = res.data;
+      const user = {
+        id: Number(raw.id),
+        account_id: Number(raw.account_id),
+        name: raw.name ?? "",
+        email: raw.email ?? null,
+        phone: raw.phone ?? null,
+        total_washes: Number(raw.total_washes ?? 0),
+        free_washes_left: Number(raw.free_washes_left ?? 4),
+        created_at: raw.created_at ?? new Date().toISOString(),
+        account: { id: Number(raw.account_id), username: raw.username ?? payload.username, role: raw.role ?? "user", created_at: raw.created_at ?? new Date().toISOString() },
+      };
+
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      if (token) await AsyncStorage.setItem("token", token);
+      return user as any;
+    } catch (err: any) {
+      console.error("❌ Lỗi đăng ký:", err?.message || err);
+      throw err;
+    }
+  },
+
   async logout() {
     await AsyncStorage.multiRemove(["user", "token"]);
   },

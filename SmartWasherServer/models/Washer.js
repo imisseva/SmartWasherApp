@@ -50,3 +50,18 @@ export async function deleteWasher(id) {
   await db.execute(`DELETE FROM washer WHERE id=?`, [id]);
   return true;
 }
+
+export async function findWasherByName(name) {
+  const [rows] = await db.execute(
+    `SELECT * FROM washer WHERE name = ? LIMIT 1`,
+    [name]
+  );
+  if (rows.length === 0) return null;
+  return mapRow(rows[0]);
+}
+
+export async function getWasherById(id) {
+  const [rows] = await db.execute(`SELECT * FROM washer WHERE id = ?`, [id]);
+  if (rows.length === 0) return null;
+  return mapRow(rows[0]);
+}

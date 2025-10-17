@@ -1,11 +1,15 @@
 import mysql from "mysql2/promise";
 
-const db = await mysql.createConnection({
+// Use a pool so getConnection() is available for transactions
+const pool = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "123456",
-  database: "smartwasher", // ⚠️ đúng tên trong phpMyAdmin
+  database: "smartwasher",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-export default db;
-console.log("✅ Kết nối MySQL thành công!");
+export default pool;
+console.log("✅ MySQL pool created (smartwasher)");

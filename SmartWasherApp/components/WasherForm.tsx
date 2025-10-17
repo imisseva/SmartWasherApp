@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Washer } from "../models/Washer";
 import { CreateWasherDto, UpdateWasherDto, WasherStatus } from "../controllers/WasherController";
 
@@ -47,6 +48,8 @@ export default function WasherForm({ initial, saving, onCancel, onSubmit }: Prop
   const [weight, setWeight] = useState<string>("7");
   const [ip, setIp] = useState<string>("");
 
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
     if (initial) {
       setName(initial.name);
@@ -82,7 +85,7 @@ export default function WasherForm({ initial, saving, onCancel, onSubmit }: Prop
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: (insets.top || 12) }]}> 
       <Text style={styles.title}>{isEdit ? "Sửa máy giặt" : "Thêm máy giặt"}</Text>
 
       {!isEdit && (
