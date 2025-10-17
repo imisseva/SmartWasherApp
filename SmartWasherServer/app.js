@@ -3,6 +3,8 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import historyRoutes from "./routes/historyRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import washerRoutes from "./routes/washerRoutes.js";
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -11,6 +13,7 @@ app.use(express.json());
 app.use("/api", authRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/admin/users", userRoutes); 
+app.use("/api/admin/washers", washerRoutes);
 app.get("/", (req, res) => {
   res.send("✅ SmartWasher API đang chạy");
 });
