@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  DeviceEventEmitter,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -29,6 +30,11 @@ export default function HomeScreen() {
       setLoading(false);
     };
     fetchUser();
+    const sub = DeviceEventEmitter.addListener("historyUpdated", async () => {
+      const data = await AsyncStorage.getItem("user");
+      if (data) setUser(JSON.parse(data));
+    });
+    return () => sub.remove();
   }, []);
 
   // ===== Đăng xuất =====
@@ -110,9 +116,13 @@ export default function HomeScreen() {
             style={styles.avatar}
           />
           <View>
-            
             <Text style={styles.greeting}>Xin chào 👋</Text>
             <Text style={styles.username}>{displayName}</Text>
+            {typeof user?.free_washes_left === "number" && (
+              <View style={styles.freeBadge}>
+                <Text style={styles.freeText}>{user.free_washes_left} lượt miễn phí</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -261,4 +271,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 10,
   },
+  freeBadge: {
+    marginTop: 6,
+    backgroundColor: "#e6fffa",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  freeText: { fontSize: 12, color: "#047857", fontWeight: "700" },
 });
