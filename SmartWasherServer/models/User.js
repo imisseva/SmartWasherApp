@@ -33,7 +33,7 @@ export async function listAdminUsers() {
 }
 
 /** Tạo account + user (transaction) */
-export async function createAdminUser({ username, password, role, name, email, phone }) {
+export async function createUserWithAccount({ username, password, role, name, email, phone }) {
   const conn = await db.getConnection();     // ✅ Bây giờ có function này
   try {
     await conn.beginTransaction();

@@ -1,6 +1,6 @@
 // controllers/authController.js
 import { getAccountByUsername } from "../models/account.js";
-import { getUserByAccountId, createAdminUser } from "../models/User.js";
+import { getUserByAccountId, createUserWithAccount } from "../models/User.js";
 import jwt from "jsonwebtoken";
 
 export async function login(req, res) {
@@ -70,7 +70,7 @@ export async function register(req, res) {
 
   try {
     // create user + account with default role = 'user'
-    const vm = await createAdminUser({ username, password, role: "user", name, email, phone });
+    const vm = await createUserWithAccount({ username, password, role: "user", name, email, phone });
 
     // generate token for the created account (account_id is present)
     const token = jwt.sign(
