@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Washer } from "../models/Washer";
-import { CreateWasherDto, UpdateWasherDto, WasherStatus } from "../controllers/WasherController";
-import client from "../constants/api";
+import WasherInfoCard from "./WasherInfoCard";
+import { WasherController, CreateWasherDto, UpdateWasherDto, WasherStatus, WasherInfo } from "../controllers/WasherController";
 
 type Props = {
   initial?: Washer;           // có => đang SỬA, không => đang THÊM
@@ -58,20 +58,34 @@ export default function WasherForm({ initial, saving, onCancel, onSubmit }: Prop
       setPrice(String(initial.price ?? 0));
       setStatus(initial.status);
     }
-  }, [initial]);
+  }, [initial, isEdit]);
 
-  // Fetch washers for quick view
-  const handleViewWashers = async () => {
-    try {
-      const res = await client.get('/api/washers');
-      const items = res.data?.washers ?? res.data ?? [];
-      if (!items.length) return Alert.alert('Danh sách máy', 'Không có máy nào');
-      const list = items.map((w: any) => `#${w.id} ${w.name} - ${w.status}`).join('\n');
-      Alert.alert('Danh sách máy', list);
-    } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Không thể lấy danh sách máy');
-    }
-  };
+  // Nếu là sửa, lấy thông tin đầy đủ từ server để hiển thị (bao gồm weight)
+  const [info, setInfo] = useState<WasherInfo | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    const loadInfo = async () => {
+      if (!isEdit) return;
+      try {
+        const id = initial!.id;
+        const res = await WasherController.getWasherInfo(id);
+        if (mounted && res) {
+          setInfo(res);
+          // Prefill weight from fetched info
+          setWeight(String(res.weight ?? 0));
+          setName(res.name ?? initial!.name ?? "");
+          setLocation(res.location ?? initial!.location ?? "");
+          setPrice(String(res.price ?? initial!.price ?? 0));
+          setStatus((res.status ?? initial!.status) as WasherStatus);
+        }
+      } catch (err: any) {
+        console.error("Lỗi khi lấy info máy giặt:", err);
+        // show soft alert but don't block
+      }
+    };
+    loadInfo();
+    return () => { mounted = false; };
+  }, [initial]);
 
   const submit = () => {
     if (!name.trim()) return Alert.alert("Thiếu tên máy giặt");
@@ -124,10 +138,15 @@ export default function WasherForm({ initial, saving, onCancel, onSubmit }: Prop
         </>
       )}
 
-      {/* Quick view washers button */}
-      <TouchableOpacity style={[styles.btn, { backgroundColor: '#0f766e', marginTop: 8 }]} onPress={handleViewWashers}>
-        <Text style={styles.btnText}>Xem máy</Text>
-      </TouchableOpacity>
+      {info && (
+        <WasherInfoCard
+          name={info.name}
+          location={info.location}
+          price={info.price}
+          status={info.status}
+          weight={info.weight}
+        />
+      )}
 
       <Text style={styles.label}>Tên máy giặt</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Máy giặt 1" />

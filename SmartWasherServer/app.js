@@ -7,6 +7,7 @@ import userRoutes from "./routes/userRoutes.js";
 import washerRoutes from "./routes/washerRoutes.js";
 import { register } from "./controllers/authController.js";
 import userWasherRoutes from "./routes/userWasherRoutes.js";
+import washerInfoRoutes from "./routes/washerInfoRoutes.js";
 import * as cron from 'node-cron';
 import { resetWeeklyFreeWashes } from "./models/User.js";
 
@@ -19,7 +20,8 @@ app.use("/api", authRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/admin/users", userRoutes);
 app.use("/api/washers", washerRoutes); // ✅ chỉ giữ 1 route chính
-app.use("/api/washer", userWasherRoutes); 
+app.use("/api/washer", userWasherRoutes);
+app.use("/api/washers", washerInfoRoutes); // API mới để lấy thông tin máy giặt
 
 // Test endpoint
 import { TestController } from "./controllers/testController.js";

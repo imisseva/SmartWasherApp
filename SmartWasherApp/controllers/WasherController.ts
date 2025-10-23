@@ -4,6 +4,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type WasherStatus = "available" | "running" | "error";
 
+export interface WasherInfo {
+  id: number;
+  name: string;
+  location: string;
+  price: number;
+  status: WasherStatus;
+  weight: number;
+}
+
 export interface CreateWasherDto {
   id?: number;
   name: string;
@@ -35,13 +44,13 @@ const normalize = (it: any): Washer => ({
 
 export const WasherController = {
   async list(): Promise<Washer[]> {
-    const res = await client.get("/api/admin/washers");
+    const res = await client.get("/api/washers");
     const items = res.data?.items ?? res.data ?? [];
     return (items as any[]).map(normalize);
   },
 
   async create(input: CreateWasherDto): Promise<Washer> {
-    const res = await client.post("/api/admin/washers", input);
+    const res = await client.post("/api/washers", input);
     const item = res.data?.washer ?? res.data;
     return normalize(item);
   },
@@ -59,15 +68,28 @@ export const WasherController = {
     }
   },
 
+  async getWasherInfo(id: number): Promise<WasherInfo | null> {
+    try {
+      const res = await client.get(`/api/washers/${id}/info`);
+      if (res.data?.success && res.data?.data) {
+        return res.data.data as WasherInfo;
+      }
+      return null;
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy thông tin máy giặt:", err);
+      return null;
+    }
+  },
+
   async update(input: UpdateWasherDto): Promise<Washer> {
     const { id, ...payload } = input;
-    const res = await client.put(`/api/admin/washers/${id}`, payload);
+    const res = await client.put(`/api/washers/${id}`, payload);
     const item = res.data?.washer ?? res.data;
     return normalize(item);
   },
 
   async remove(id: number): Promise<void> {
-    await client.delete(`/api/admin/washers/${id}`);
+    await client.delete(`/api/washers/${id}`);
   },
 
   /** ================== 💰 TÍNH TIỀN & LƯU LỊCH SỬ ================== */
