@@ -17,16 +17,44 @@ import { useRouter } from "expo-router";
 import client from "../../constants/api"; // ✅ dùng axios client chung
 
 export default function HomeScreen() {
+  // Hàm test reset lượt giặt (chỉ cho admin)
+  const handleTestReset = async () => {
+    try {
+      const res = await client.post("/api/test/reset-washes");
+      if (res.data?.success) {
+        Alert.alert("✅ Reset thành công", res.data.message);
+        // Refresh user data
+        const data = await AsyncStorage.getItem("user");
+        if (data) setUser(JSON.parse(data));
+      } else {
+        Alert.alert("❌ Lỗi", res.data?.message || "Không thể reset");
+      }
+    } catch (err: any) {
+      Alert.alert("❌ Lỗi", err?.message || "Không thể kết nối tới server");
+    }
+  };
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [machineCode, setMachineCode] = useState("");
+  const [currentDay, setCurrentDay] = useState(1); // 1 = Thứ 2, 7 = Chủ nhật
+
+  // Hàm để tính số ngày còn lại đến thứ 2 tiếp theo
+  const getDaysUntilNextMonday = (currentDayOfWeek: number) => {
+    // Nếu là chủ nhật (7), trả về 1 vì ngày mai là thứ 2
+    // Nếu là các ngày khác, tính số ngày còn lại đến thứ 2
+    return currentDayOfWeek === 7 ? 1 : 8 - currentDayOfWeek;
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
       const data = await AsyncStorage.getItem("user");
-      if (data) setUser(JSON.parse(data));
+      if (data) {
+        const userData = JSON.parse(data);
+        console.log("User data in HomeScreen:", userData); // Debug log
+        setUser(userData);
+      }
       setLoading(false);
     };
     fetchUser();
@@ -119,16 +147,72 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Xin chào 👋</Text>
             <Text style={styles.username}>{displayName}</Text>
             {typeof user?.free_washes_left === "number" && (
-              <View style={styles.freeBadge}>
-                <Text style={styles.freeText}>{user.free_washes_left} lượt miễn phí</Text>
-              </View>
+              <>
+                <View style={styles.freeBadge}>
+                  <Text style={styles.freeText}>
+                    {user.free_washes_left} lượt miễn phí
+                  </Text>
+                </View>
+                <Text style={styles.resetNote}>
+                  {getDaysUntilNextMonday(currentDay) === 0 
+                    ? "Reset hôm nay lúc 00:00"
+                    : `Reset sau ${getDaysUntilNextMonday(currentDay)} ngày`}
+                </Text>
+                {/* Thanh chọn ngày để test */}
+                <View style={styles.daySelector}>
+                  {[1,2,3,4,5,6,7].map(day => (
+                    <TouchableOpacity 
+                      key={day}
+                      style={[
+                        styles.dayButton,
+                        currentDay === day && styles.selectedDay
+                      ]}
+                      onPress={() => setCurrentDay(day)}
+                    >
+                      <Text style={[
+                        styles.dayText,
+                        currentDay === day && styles.selectedDayText
+                      ]}>
+                        {day === 7 ? "CN" : `T${day + 1}`}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {/* Nút test reset (chỉ hiện cho admin) */}
+                {user?.account?.role === 'admin' && (
+                  <TouchableOpacity 
+                    style={styles.testButton}
+                    onPress={handleTestReset}
+                  >
+                    <Text style={styles.testButtonText}>
+                      🧪 Test Reset
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          {/* Nút test reset cho admin */}
+          {user?.account?.role === 'admin' && (
+            <TouchableOpacity 
+              style={styles.adminButton}
+              onPress={handleTestReset}
+            >
+              <Ionicons name="refresh-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
+          
+          {/* Nút đăng xuất */}
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ===== Nội dung chính ===== */}
@@ -280,4 +364,58 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   freeText: { fontSize: 12, color: "#047857", fontWeight: "700" },
+  resetNote: { 
+    fontSize: 11, 
+    color: "#666",
+    marginTop: 4,
+    marginBottom: 8,
+    fontStyle: 'italic'
+  },
+  daySelector: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 4,
+    padding: 4,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  dayButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedDay: {
+    backgroundColor: '#4B8BF5',
+  },
+  dayText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  selectedDayText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  testButton: {
+    marginTop: 8,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  testButtonText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  adminButton: {
+    backgroundColor: '#047857', // màu xanh lá đậm
+    padding: 8,
+    borderRadius: 20,
+  },
 });
