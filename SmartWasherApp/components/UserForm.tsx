@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { AdminUserVM, CreateUserDto, UpdateUserDto } from "../controllers/UserController";
-import client from "../constants/api";
+// client removed; reset moved to Users screen
 
 export default function UserForm({
   initial,
@@ -61,34 +61,12 @@ export default function UserForm({
     }
   };
 
-  // Handler to trigger weekly reset (test endpoint)
-  const handleResetWeekly = async () => {
-    Alert.alert("Xác nhận", "Bạn có chắc muốn reset lượt giặt của tất cả tài khoản về 7?", [
-      { text: "Hủy", style: "cancel" },
-      { text: "Reset", style: "destructive", onPress: async () => {
-        try {
-          const res = await client.post('/api/test/reset-washes');
-          if (res.data?.success) {
-            Alert.alert('✅ Thành công', res.data.message || 'Đã reset');
-          } else {
-            Alert.alert('❌ Lỗi', res.data?.message || 'Không thể reset');
-          }
-        } catch (err: any) {
-          Alert.alert('❌ Lỗi', err?.message || 'Không thể kết nối');
-        }
-      }}
-    ]);
-  };
+  // reset button moved to Users screen
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f5ff" }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-  <View style={[styles.header, { paddingTop: insets.top || 12 }]}>
-          {/* Reset weekly button on left */}
-          <TouchableOpacity onPress={handleResetWeekly} style={styles.resetBtn} hitSlop={8}>
-            <Ionicons name="refresh" size={20} color="#0b8650" />
-          </TouchableOpacity>
-
+  <View style={[styles.header, { paddingTop: insets.top || 12 }]}> 
           <TouchableOpacity onPress={onCancel} style={styles.backBtn} hitSlop={8}>
             <Ionicons name="chevron-back" size={24} color="#1f2a44" />
           </TouchableOpacity>

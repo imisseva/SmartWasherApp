@@ -21,6 +21,7 @@ import {
   UpdateUserDto,
 } from "../../controllers/UserController";
 import UserForm from "../../components/UserForm";
+import client from "../../constants/api";
 
 export default function UsersScreen() {
   const router = useRouter();
@@ -189,6 +190,32 @@ export default function UsersScreen() {
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
+      {/* Floating reset button (bottom-left) */}
+      <TouchableOpacity
+        style={styles.resetFab}
+        onPress={() => {
+          Alert.alert("Xác nhận", "Reset lượt giặt miễn phí cho tất cả user về 7?", [
+            { text: "Huỷ", style: "cancel" },
+            { text: "Reset", style: "destructive", onPress: async () => {
+              try {
+                const res = await client.post('/api/test/reset-washes');
+                if (res.data?.success) {
+                  Alert.alert('✅ Thành công', res.data.message || 'Đã reset');
+                  await load();
+                } else {
+                  Alert.alert('❌ Lỗi', res.data?.message || 'Reset thất bại');
+                }
+              } catch (err: any) {
+                Alert.alert('❌ Lỗi', err?.message || 'Không thể kết nối');
+              }
+            }}
+          ]);
+        }}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="refresh" size={22} color="#fff" />
+      </TouchableOpacity>
+
       {/* Form thêm/sửa */}
       <Modal
         visible={modalVisible}
@@ -274,5 +301,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
+  },
+  resetFab: {
+    position: "absolute",
+    left: 18,
+    bottom: Platform.OS === "ios" ? 40 : 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0b8650",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
