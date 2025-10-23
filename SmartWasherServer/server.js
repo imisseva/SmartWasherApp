@@ -133,4 +133,9 @@
 import app from "./app.js";
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log("API listening on", PORT));
+const HOST = "0.0.0.0"; // cho phép toàn mạng LAN truy cập
+
+app.listen(PORT, HOST, () => {
+  console.log(`✅ SmartWasher API đang chạy tại http://${HOST}:${PORT}`);
+});
+

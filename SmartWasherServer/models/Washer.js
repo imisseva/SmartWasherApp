@@ -1,4 +1,3 @@
-// models/Washer.js
 import db from "../db.js";
 
 const mapRow = (r) => ({
@@ -17,9 +16,7 @@ export async function listWashers() {
   return rows.map(mapRow);
 }
 
-// ⬇️ Cho phép: id (optional), weight, ip_address khi tạo mới
 export async function createWasher({ id, name, location, weight, price, status, ip_address }) {
-  // xây INSERT động để chèn id nếu có
   const cols = ["name", "location", "weight", "price", "status", "ip_address"];
   const vals = [name, location ?? null, weight ?? 0, price ?? 0, status, ip_address ?? null];
   let sql = `INSERT INTO washer (${cols.join(",")}) VALUES (?,?,?,?,?,?)`;
@@ -36,14 +33,21 @@ export async function createWasher({ id, name, location, weight, price, status, 
   return mapRow(rows[0]);
 }
 
-// Sửa: CHỈ cho sửa name, location, price, status
+// ✅ Cập nhật an toàn
 export async function updateWasherLimited({ id, name, location, price, status }) {
+  const safeId = Number(id);
+  const safeName = name ?? "";
+  const safeLocation = location ?? null;
+  const safePrice = Number(price ?? 0);
+  const safeStatus = status ?? "available";
+
   await db.execute(
     `UPDATE washer SET name=?, location=?, price=?, status=? WHERE id=?`,
-    [name, location ?? null, price ?? 0, status, id]
+    [safeName, safeLocation, safePrice, safeStatus, safeId]
   );
-  const [rows] = await db.execute(`SELECT * FROM washer WHERE id=?`, [id]);
-  return mapRow(rows[0]);
+
+  const [rows] = await db.execute(`SELECT * FROM washer WHERE id=?`, [safeId]);
+  return rows.length ? mapRow(rows[0]) : null;
 }
 
 export async function deleteWasher(id) {
@@ -52,16 +56,51 @@ export async function deleteWasher(id) {
 }
 
 export async function findWasherByName(name) {
-  const [rows] = await db.execute(
-    `SELECT * FROM washer WHERE name = ? LIMIT 1`,
-    [name]
-  );
-  if (rows.length === 0) return null;
-  return mapRow(rows[0]);
+  const [rows] = await db.execute(`SELECT * FROM washer WHERE name=? LIMIT 1`, [name]);
+  return rows.length ? mapRow(rows[0]) : null;
 }
 
 export async function getWasherById(id) {
-  const [rows] = await db.execute(`SELECT * FROM washer WHERE id = ?`, [id]);
+  const [rows] = await db.execute(`SELECT * FROM washer WHERE id=?`, [id]);
+  return rows.length ? mapRow(rows[0]) : null;
+}
+
+// ⚠️ Không dùng cho command nữa, nhưng giữ lại để tránh lỗi import
+export async function getWasherCommandById(id) {
+  const [rows] = await db.execute(`SELECT status FROM washer WHERE id=?`, [id]);
   if (rows.length === 0) return null;
+  return { id, command: rows[0].status === "running" ? "START" : "NONE" };
+}
+
+export async function startWasherById(id) {
+  await db.execute(`UPDATE washer SET status='running', last_used=NOW() WHERE id=?`, [id]);
+  const [rows] = await db.execute(`SELECT * FROM washer WHERE id=?`, [id]);
   return mapRow(rows[0]);
 }
+
+export async function stopWasherById(id) {
+  await db.execute(`UPDATE washer SET status='available' WHERE id=?`, [id]);
+  const [rows] = await db.execute(`SELECT * FROM washer WHERE id=?`, [id]);
+  return mapRow(rows[0]);
+}
+
+
+export const Washer = {
+  getAll: () => {
+    return new Promise((resolve, reject) => {
+      db.query("SELECT * FROM washer", (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
+
+  getById: (id) => {
+    return new Promise((resolve, reject) => {
+      db.query("SELECT * FROM washer WHERE id = ?", [id], (err, results) => {
+        if (err) return reject(err);
+        resolve(results[0]);
+      });
+    });
+  },
+};

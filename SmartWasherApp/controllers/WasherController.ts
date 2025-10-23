@@ -1,14 +1,10 @@
 import client from "../constants/api";
 import { Washer } from "../models/Washer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-export type WasherStatus = "available" | "running" | "error";
-// export const WasherController = {
-  
-//   // Tính tiền & lưu lịch sử giặt
 
-// };
+export type WasherStatus = "available" | "running" | "error";
+
 export interface CreateWasherDto {
-  // id cho phép truyền vào khi tạo (nếu bạn muốn tự đặt), có thể bỏ nếu dùng AUTO_INCREMENT
   id?: number;
   name: string;
   location?: string | null;
@@ -17,6 +13,7 @@ export interface CreateWasherDto {
   status: WasherStatus;
   ip_address?: string | null;
 }
+
 export interface UpdateWasherDto {
   id: number;
   name: string;
@@ -72,21 +69,30 @@ export const WasherController = {
   async remove(id: number): Promise<void> {
     await client.delete(`/api/admin/washers/${id}`);
   },
+
+  /** ================== 💰 TÍNH TIỀN & LƯU LỊCH SỬ ================== */
   async calculateAndSaveWash(weight: number, washer: Washer): Promise<number> {
     const userData = await AsyncStorage.getItem("user");
     if (!userData) throw new Error("Không tìm thấy người dùng");
     const user = JSON.parse(userData);
 
-    const freeWashes = user.free_washes_left ?? 0;
-    let totalCost = 0;
+    // 1️⃣ Kiểm tra trạng thái máy
+    console.log(`📡 [App → Server] Yêu cầu khởi động máy giặt #${washer.id}`);
+    const startRes = await client.put(`/api/washers/${washer.id}/start`);
 
-    if (freeWashes > 0) {
-      totalCost = 0;
-    } else {
-      totalCost = Math.round((washer.price / washer.weight) * weight);
+    if (!startRes.data?.success) {
+      const msg = startRes.data?.message || "Máy đang có người sử dụng";
+      console.warn("⚠️ Không thể khởi động máy:", msg);
+      throw new Error(msg);
     }
 
-    // Gọi API lưu lịch sử
+    // 2️⃣ Tính tiền
+    const freeWashes = user.free_washes_left ?? 0;
+    let totalCost = 0;
+    if (freeWashes > 0) totalCost = 0;
+    else totalCost = Math.round((washer.price / washer.weight) * weight);
+
+    // 3️⃣ Gửi lịch sử lên server
     try {
       const res = await client.post("/api/wash-history", {
         user_id: user.id,
@@ -94,30 +100,43 @@ export const WasherController = {
         cost: totalCost,
       });
 
-      // If server returned updated user info, persist it locally
+      // Cập nhật thông tin user cục bộ nếu có trả về
       if (res?.data?.user) {
-        try {
-          const stored = await AsyncStorage.getItem("user");
-          const cur = stored ? JSON.parse(stored) : {};
-          const updated = { ...cur, ...res.data.user };
-          await AsyncStorage.setItem("user", JSON.stringify(updated));
-        } catch (e) {
-          console.warn("Không thể cập nhật user cục bộ:", e);
-        }
+        const cur = JSON.parse(await AsyncStorage.getItem("user") || "{}");
+        const updated = { ...cur, ...res.data.user };
+        await AsyncStorage.setItem("user", JSON.stringify(updated));
       }
     } catch (err: any) {
-      // Log detailed axios error to help debugging
-      if (err.response) {
-        console.error("❌ Lỗi lưu lịch sử - response:", err.response.status, err.response.data);
-      } else if (err.request) {
-        console.error("❌ Lỗi lưu lịch sử - no response, request:", err.request);
-      } else {
-        console.error("❌ Lỗi lưu lịch sử - setup:", err.message);
-      }
-      throw err;
+      if (err.response) console.error("❌ Lỗi lưu lịch sử:", err.response.data);
+      else console.error("❌ Lỗi lưu lịch sử:", err);
     }
 
     return totalCost;
   },
-};
 
+  // ================== ⚙️ PHẦN NHÚNG ESP32 ==================
+  async startWasher(id: number): Promise<void> {
+    console.log(`📡 [App → Server] Bắt đầu giặt máy #${id}`);
+    await client.put(`/api/washers/${id}/start`);
+  },
+
+  async stopWasher(id: number): Promise<void> {
+    console.log(`🛑 [App → Server] Dừng máy giặt #${id}`);
+    await client.put(`/api/washers/${id}/stop`);
+  },
+
+  async updateWasherStatus(id: number, status: WasherStatus, ip?: string): Promise<void> {
+    console.log(`📶 [ESP32 → Server] Cập nhật trạng thái máy #${id}: ${status} (${ip || "no IP"})`);
+    await client.put("/api/washers/update-status", {
+      washer_id: id,
+      status,
+      ip,
+    });
+  },
+
+  async getWasherCommand(id: number): Promise<{ command: string }> {
+    const res = await client.get(`/api/washers/${id}/command`);
+    console.log(`📨 [ESP32 ← Server] Lấy lệnh của máy #${id}:`, res.data.command);
+    return res.data;
+  },
+};
