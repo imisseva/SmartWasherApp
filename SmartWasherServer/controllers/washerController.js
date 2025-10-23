@@ -212,10 +212,9 @@ export const getWasherCommand = async (req, res) => {
     }
 
     console.log("🤖 ESP hỏi lệnh ->", result);
+    
+    // Chỉ reset command khi ESP đã nhận và bắt đầu giặt (sẽ gửi status=running)
     res.send(result);
-
-    // ❗️Ngay sau khi gửi command, tự reset về 0 để ESP tự động tắt
-    currentCommand = null;
 
   } catch (err) {
     console.error("getWasherCommand error:", err);

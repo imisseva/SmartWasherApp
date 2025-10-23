@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "reac
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Washer } from "../models/Washer";
 import { CreateWasherDto, UpdateWasherDto, WasherStatus } from "../controllers/WasherController";
+import client from "../constants/api";
 
 type Props = {
   initial?: Washer;           // có => đang SỬA, không => đang THÊM
@@ -59,6 +60,19 @@ export default function WasherForm({ initial, saving, onCancel, onSubmit }: Prop
     }
   }, [initial]);
 
+  // Fetch washers for quick view
+  const handleViewWashers = async () => {
+    try {
+      const res = await client.get('/api/washers');
+      const items = res.data?.washers ?? res.data ?? [];
+      if (!items.length) return Alert.alert('Danh sách máy', 'Không có máy nào');
+      const list = items.map((w: any) => `#${w.id} ${w.name} - ${w.status}`).join('\n');
+      Alert.alert('Danh sách máy', list);
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không thể lấy danh sách máy');
+    }
+  };
+
   const submit = () => {
     if (!name.trim()) return Alert.alert("Thiếu tên máy giặt");
     const base = {
@@ -109,6 +123,11 @@ export default function WasherForm({ initial, saving, onCancel, onSubmit }: Prop
           />
         </>
       )}
+
+      {/* Quick view washers button */}
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#0f766e', marginTop: 8 }]} onPress={handleViewWashers}>
+        <Text style={styles.btnText}>Xem máy</Text>
+      </TouchableOpacity>
 
       <Text style={styles.label}>Tên máy giặt</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Máy giặt 1" />

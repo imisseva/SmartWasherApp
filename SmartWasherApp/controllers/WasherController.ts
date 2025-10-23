@@ -76,17 +76,7 @@ export const WasherController = {
     if (!userData) throw new Error("Không tìm thấy người dùng");
     const user = JSON.parse(userData);
 
-    // 1️⃣ Kiểm tra trạng thái máy
-    console.log(`📡 [App → Server] Yêu cầu khởi động máy giặt #${washer.id}`);
-    const startRes = await client.put(`/api/washers/${washer.id}/start`);
-
-    if (!startRes.data?.success) {
-      const msg = startRes.data?.message || "Máy đang có người sử dụng";
-      console.warn("⚠️ Không thể khởi động máy:", msg);
-      throw new Error(msg);
-    }
-
-    // 2️⃣ Tính tiền
+    // 1️⃣ Tính tiền
     const freeWashes = user.free_washes_left ?? 0;
     let totalCost = 0;
     if (freeWashes > 0) totalCost = 0;
@@ -115,9 +105,20 @@ export const WasherController = {
   },
 
   // ================== ⚙️ PHẦN NHÚNG ESP32 ==================
-  async startWasher(id: number): Promise<void> {
+  async startWasher(id: number): Promise<{ success: boolean; message?: string }> {
     console.log(`📡 [App → Server] Bắt đầu giặt máy #${id}`);
-    await client.put(`/api/washers/${id}/start`);
+    try {
+      const res = await client.put(`/api/washers/${id}/start`);
+      return {
+        success: res.data?.success ?? false,
+        message: res.data?.message
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Không thể kết nối đến máy giặt"
+      };
+    }
   },
 
   async stopWasher(id: number): Promise<void> {

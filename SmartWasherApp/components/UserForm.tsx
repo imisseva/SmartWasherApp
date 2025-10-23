@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { AdminUserVM, CreateUserDto, UpdateUserDto } from "../controllers/UserController";
+import client from "../constants/api";
 
 export default function UserForm({
   initial,
@@ -23,6 +24,7 @@ export default function UserForm({
   const [name, setName] = useState(initial?.name ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
+  const [freeLeft, setFreeLeft] = useState<number>(initial?.free_washes_left ?? 0);
 
   const submit = () => {
     if (!username.trim()) {
@@ -53,19 +55,46 @@ export default function UserForm({
         name: name.trim(),
         email: email.trim() || null,
         phone: phone.trim() || null,
+        // New users will start with default free washes handled by server; we don't send freeLeft here
       };
       onSubmit(payload);
     }
+  };
+
+  // Handler to trigger weekly reset (test endpoint)
+  const handleResetWeekly = async () => {
+    Alert.alert("Xác nhận", "Bạn có chắc muốn reset lượt giặt của tất cả tài khoản về 7?", [
+      { text: "Hủy", style: "cancel" },
+      { text: "Reset", style: "destructive", onPress: async () => {
+        try {
+          const res = await client.post('/api/test/reset-washes');
+          if (res.data?.success) {
+            Alert.alert('✅ Thành công', res.data.message || 'Đã reset');
+          } else {
+            Alert.alert('❌ Lỗi', res.data?.message || 'Không thể reset');
+          }
+        } catch (err: any) {
+          Alert.alert('❌ Lỗi', err?.message || 'Không thể kết nối');
+        }
+      }}
+    ]);
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f5ff" }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
   <View style={[styles.header, { paddingTop: insets.top || 12 }]}>
+          {/* Reset weekly button on left */}
+          <TouchableOpacity onPress={handleResetWeekly} style={styles.resetBtn} hitSlop={8}>
+            <Ionicons name="refresh" size={20} color="#0b8650" />
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={onCancel} style={styles.backBtn} hitSlop={8}>
             <Ionicons name="chevron-back" size={24} color="#1f2a44" />
           </TouchableOpacity>
+
           <Text style={styles.headerTitle}>{isEdit ? "Sửa người dùng" : "Thêm người dùng"}</Text>
+
           <TouchableOpacity onPress={submit} disabled={saving}>
             {saving ? <ActivityIndicator /> : <Text style={styles.saveText}>Lưu</Text>}
           </TouchableOpacity>
@@ -99,6 +128,17 @@ export default function UserForm({
           <Field label="SĐT">
             <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           </Field>
+
+          {isEdit && (
+            <Field label="Lượt miễn phí còn lại">
+              <TextInput
+                style={styles.input}
+                value={String(freeLeft ?? 0)}
+                onChangeText={(v) => setFreeLeft(Number(v.replace(/[^0-9]/g, '')))}
+                keyboardType="numeric"
+              />
+            </Field>
+          )}
 
           <Field label="Quyền">
             <View style={{ flexDirection: "row", gap: 12 }}>
@@ -155,6 +195,17 @@ const styles = StyleSheet.create({
   },
   label: { fontSize: 13, color: "#4b5563", marginBottom: 8 },
   input: { backgroundColor: "#f8f9ff", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
+
+  // Place reset button inline with header so it respects safe area
+  resetBtn: {
+    marginRight: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(11,134,80,0.06)'
+  },
 
   chip: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#fff" },
   chipText: { color: "#6b7280" },
