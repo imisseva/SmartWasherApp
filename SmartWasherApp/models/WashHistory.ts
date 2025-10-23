@@ -7,3 +7,4 @@ export interface WashHistory {
   cost: number;
   status: string;
 }
+  

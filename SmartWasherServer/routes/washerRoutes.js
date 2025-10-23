@@ -1,21 +1,43 @@
 // routes/washerRoutes.js
 import { Router } from "express";
-import { getWashers, postWasher, putWasher, deleteWasherCtrl, getWasherById } from "../controllers/washerController.js";
+import {
+  getWashers,
+  postWasher,
+  putWasher,
+  deleteWasherCtrl,
+  getWasherById,
+  getWasherByName,
+  startWasher,
+  stopWasher,
+  updateWasherStatus,
+  getWasherCommand,
+} from "../controllers/washerController.js";
 
-
-
-// Nếu cần bảo vệ admin bằng JWT, thêm verifyToken/requireAdmin giống userRoutes
 const router = Router();
 
-// If query param 'name' is present, delegate to getWasherByName to return one washer.
+// ==== CRUD LIST/SEARCH ====
 router.get("/", (req, res, next) => {
-	if (req.query && req.query.name) return getWasherByName(req, res, next);
-	return getWashers(req, res, next);
-});          // GET /api/admin/washers or GET /api/washer?name=...
-router.post("/", postWasher);         // POST /api/admin/washers
-router.put("/:id", putWasher);        // PUT /api/admin/washers/:id
-router.delete("/:id", deleteWasherCtrl); // DELETE /api/admin/washers/:id
-router.get("/:id", getWasherById);  // GET /api/washer/:id
+  if (req.query && req.query.name) return getWasherByName(req, res, next);
+  return getWashers(req, res, next);
+});
+router.post("/", postWasher);
+router.put("/:id", putWasher);
+router.delete("/:id", deleteWasherCtrl);
 
+// ==== ESP COMMAND ENDPOINTS ====
+// NOTE: Đặt /command TRƯỚC "/:id" để không bị khớp nhầm ":id=command"
+router.get("/command", getWasherCommand);        // ESP hỏi lệnh tổng quát
+router.get("/:id/command", getWasherCommand);    // ESP hỏi lệnh theo id (nếu cần)
+
+// Update status: chấp nhận id ở body hoặc URL
+router.put("/update-status", updateWasherStatus);
+router.put("/update-status/:id", updateWasherStatus);
+
+// Start/Stop từ App
+router.put("/:id/start", startWasher);
+router.put("/:id/stop", stopWasher);
+
+// Cuối cùng mới đặt GET /:id (tránh đè /command)
+router.get("/:id", getWasherById);
 
 export default router;
