@@ -73,11 +73,19 @@ export default function WasherInfo() {
     }
 
     try {
+      // 1. Gửi lệnh START đến máy giặt
+      const startRes = await WasherController.startWasher(washer.id);
+      if (!startRes?.success) {
+        throw new Error(startRes?.message || "Không thể bắt đầu giặt");
+      }
+
+      // 2. Tính tiền và lưu lịch sử
       const totalCost = await WasherController.calculateAndSaveWash(kg, washer);
 
+      // 3. Hiển thị thông báo và theo dõi trạng thái
       Alert.alert(
-        "✅ Thành công",
-        `Tổng tiền: ${totalCost.toLocaleString()}đ\nLịch sử giặt đã được lưu.`,
+        "✅ Đã bắt đầu giặt",
+        `- Máy giặt ${washer.name} đang hoạt động\n- Tổng tiền: ${totalCost.toLocaleString()}đ\n- Lịch sử giặt đã được lưu.`,
         [
           {
             text: "OK",
@@ -94,8 +102,8 @@ export default function WasherInfo() {
         ]
       );
     } catch (err: any) {
-      console.error("❌ Lỗi lưu lịch sử:", err);
-      Alert.alert("Lỗi", err.message || "Không thể lưu lịch sử giặt.");
+      console.error("❌ Lỗi khi giặt:", err);
+      Alert.alert("Lỗi", err.message || "Không thể bắt đầu giặt.");
     }
   };
 
