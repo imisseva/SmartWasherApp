@@ -12,6 +12,7 @@ import {
   updateWasherStatus,
   getWasherCommand,
 } from "../controllers/washerController.js";
+import { receiveResultFromESP } from "../controllers/washerController.js";
 
 const router = Router();
 
@@ -39,5 +40,11 @@ router.put("/:id/stop", stopWasher);
 
 // Cuối cùng mới đặt GET /:id (tránh đè /command)
 router.get("/:id", getWasherById);
+router.post("/result", receiveResultFromESP);
 
 export default router;
+
+
+
+
+

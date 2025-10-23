@@ -44,9 +44,15 @@ export const WasherController = {
 export const getWasherByName = async (req, res) => {
   try {
     const name = req.query.name;
-    if (!name) return res.status(400).json({ success: false, message: "Thiếu tên máy giặt" });
+    if (!name)
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu tên máy giặt" });
     const washer = await findWasherByName(name.trim());
-    if (!washer) return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+    if (!washer)
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy máy giặt" });
     res.json({ success: true, washer });
   } catch (err) {
     console.error("getWasherByName error:", err);
@@ -60,14 +66,19 @@ export const getWashers = async (_req, res) => {
     res.json({ success: true, items });
   } catch (e) {
     console.error("getWashers error:", e);
-    res.status(500).json({ success: false, message: "Failed to list washers" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to list washers" });
   }
 };
 
 export const postWasher = async (req, res) => {
   try {
     const { id, name, location, weight, price, status, ip_address } = req.body;
-    if (!name || !status) return res.status(400).json({ success: false, message: "Thiếu name/status" });
+    if (!name || !status)
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu name/status" });
 
     const washer = await createWasher({
       id: typeof id === "number" ? id : undefined,
@@ -81,17 +92,25 @@ export const postWasher = async (req, res) => {
     res.json({ success: true, washer });
   } catch (e) {
     console.error("postWasher error:", e);
-    res.status(500).json({ success: false, message: "Failed to create washer" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to create washer" });
   }
 };
 
 export const putWasher = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ success: false, message: "ID không hợp lệ" });
+    if (isNaN(id))
+      return res
+        .status(400)
+        .json({ success: false, message: "ID không hợp lệ" });
 
     const current = await getWasherByIdModel(id);
-    if (!current) return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+    if (!current)
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy máy giặt" });
 
     const body = req.body || {};
     const washer = await updateWasherLimited({
@@ -105,7 +124,9 @@ export const putWasher = async (req, res) => {
     res.json({ success: true, washer });
   } catch (e) {
     console.error("putWasher error:", e);
-    res.status(500).json({ success: false, message: "Failed to update washer" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to update washer" });
   }
 };
 
@@ -116,33 +137,44 @@ export const deleteWasherCtrl = async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     console.error("deleteWasher error:", e);
-    res.status(500).json({ success: false, message: "Failed to delete washer" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to delete washer" });
   }
 };
 
 export const getWasherById = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ success: false, message: "ID không hợp lệ" });
+    if (isNaN(id))
+      return res
+        .status(400)
+        .json({ success: false, message: "ID không hợp lệ" });
 
     const washer = await getWasherByIdModel(id);
-    if (!washer) return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+    if (!washer)
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy máy giặt" });
     res.json({ success: true, washer });
   } catch (e) {
     console.error("getWasherById error:", e);
-    res.status(500).json({ success: false, message: "Lỗi server khi tìm máy giặt" });
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi tìm máy giặt" });
   }
 };
 
-// ===== PHẦN NHÚNG ESP32 =====
+// ====== PHẦN NHÚNG ESP32 ======
 
 // App yêu cầu bắt đầu giặt: set DB = running + phát lệnh START_x cho ESP
 export const startWasher = async (req, res) => {
   const id = Number(req.params.id);
-  if (!id) return res.status(400).json({ success: false, message: "ID không hợp lệ" });
+  if (!id)
+    return res.status(400).json({ success: false, message: "ID không hợp lệ" });
   try {
     const washer = await startWasherById(id);
-    currentCommand = `START_${id}`;       // ESP sẽ GET /api/washers/command để nhận lệnh này
+    currentCommand = `START_${id}`;
     console.log(`🧺 START_${id} — gửi cho ESP, DB đã chuyển 'running'`);
     res.json({ success: true, washer, command: currentCommand });
   } catch (err) {
@@ -154,7 +186,8 @@ export const startWasher = async (req, res) => {
 // App yêu cầu dừng giặt
 export const stopWasher = async (req, res) => {
   const id = Number(req.params.id);
-  if (!id) return res.status(400).json({ success: false, message: "ID không hợp lệ" });
+  if (!id)
+    return res.status(400).json({ success: false, message: "ID không hợp lệ" });
   try {
     const washer = await stopWasherById(id);
     currentCommand = `STOP_${id}`;
@@ -166,25 +199,32 @@ export const stopWasher = async (req, res) => {
   }
 };
 
-// ESP hỏi lệnh: cho phép hỏi tổng quát (/command) hoặc theo id (/:id/command)
-// Trả về "NONE" nếu không có gì để làm; (tùy ý) reset command sau khi cấp phát.
+// ESP hỏi lệnh
+// ESP hỏi lệnh
 export const getWasherCommand = async (req, res) => {
   try {
-    // Nếu muốn tinh vi hơn, bạn có thể kiểm tra req.params.id và phát lệnh đúng máy
-    const cmd = currentCommand || "NONE";
-    console.log("🤖 ESP hỏi lệnh ->", cmd);
-    res.json({ command: cmd });
-    // 👉 Nếu muốn lệnh chỉ dùng 1 lần, bỏ comment dưới:
-    // currentCommand = null;
+    let result = "0";
+
+    if (currentCommand === "START_1") {
+      result = "1";
+    } else if (currentCommand === "START_2") {
+      result = "2";
+    }
+
+    console.log("🤖 ESP hỏi lệnh ->", result);
+    res.send(result);
+
+    // ❗️Ngay sau khi gửi command, tự reset về 0 để ESP tự động tắt
+    currentCommand = null;
+
   } catch (err) {
     console.error("getWasherCommand error:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).send("0");
   }
 };
 
+
 // ESP báo trạng thái thực tế
-// Chấp nhận: PUT /api/washers/update-status { washer_id, status, ip }
-// hoặc:      PUT /api/washers/update-status/:id  { status, ip }
 export const updateWasherStatus = async (req, res) => {
   console.log("📥 ESP body:", req.body, "params:", req.params);
   try {
@@ -194,10 +234,14 @@ export const updateWasherStatus = async (req, res) => {
     const ip = req.body?.ip ?? null;
 
     if (!washer_id || isNaN(washer_id)) {
-      return res.status(400).json({ success: false, message: `ID không hợp lệ: ${washer_id_raw}` });
+      return res
+        .status(400)
+        .json({ success: false, message: `ID không hợp lệ: ${washer_id_raw}` });
     }
     if (!status) {
-      return res.status(400).json({ success: false, message: "Thiếu trạng thái (status)" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu trạng thái (status)" });
     }
 
     const [rows] = await db.execute(
@@ -205,13 +249,52 @@ export const updateWasherStatus = async (req, res) => {
       [status, ip, washer_id]
     );
     if (!rows?.affectedRows) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy máy giặt" });
     }
 
-    console.log(`📡 ESP cập nhật Washer ${washer_id} → ${status} (${ip || "no ip"})`);
+    console.log(
+      `📡 ESP cập nhật Washer ${washer_id} → ${status} (${ip || "no ip"})`
+    );
+
+    // ✅ Reset command sau khi ESP báo trạng thái
+    currentCommand = null;
+
     res.json({ success: true, washer_id, status });
   } catch (err) {
     console.error("updateWasherStatus error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ✅ ESP gửi kết quả giặt (ví dụ: { washer_id: 1, result: 0 })
+export const receiveResultFromESP = async (req, res) => {
+  try {
+    const { washer_id, result } = req.body;
+    if (!washer_id || isNaN(Number(washer_id))) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Thiếu hoặc ID không hợp lệ" });
+    }
+
+    console.log(
+      `📬 ESP báo kết quả: Máy ${washer_id} → ${
+        result == 0 ? "Hoàn thành" : "Lỗi"
+      }`
+    );
+
+    await db.execute(
+      "UPDATE washer SET status=?, last_used=NOW() WHERE id=?",
+      [result == 0 ? "available" : "error", washer_id]
+    );
+
+    // ✅ Tự động tắt command sau khi nhận kết quả
+    currentCommand = null;
+
+    res.json({ success: true, washer_id, result });
+  } catch (err) {
+    console.error("receiveResultFromESP error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
