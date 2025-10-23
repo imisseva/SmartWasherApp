@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { getUsers, postUser, putUser, deleteUser } from "../controllers/userController.js";
 
-// (tuỳ chọn) bảo vệ admin bằng JWT
+
 import jwt from "jsonwebtoken";
 const verifyToken = (req, res, next) => {
   try {
