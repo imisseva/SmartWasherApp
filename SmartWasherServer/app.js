@@ -23,10 +23,6 @@ app.use("/api/washers", washerRoutes); // ✅ chỉ giữ 1 route chính
 app.use("/api/washer", userWasherRoutes);
 app.use("/api/washers", washerInfoRoutes); // API mới để lấy thông tin máy giặt
 
-// Test endpoint
-import { TestController } from "./controllers/testController.js";
-app.post("/api/test/reset-washes", TestController.resetFreeWashes);
-
 app.get("/", (req, res) => {
   res.send("✅ SmartWasher API đang chạy");
 });
