@@ -85,22 +85,58 @@ export default function WasherInfo() {
       // 3. Bắt đầu polling để kiểm tra trạng thái máy giặt
       const checkWasherStatus = async () => {
         const data = await WasherController.getWasherById(washer.id);
-        
+        // Cập nhật state máy mới ngay để UI hiển thị status mới
+        if (data) setWasher(data);
+
         // Nếu máy giặt xong (available) hoặc gặp lỗi
         if (data?.status === 'available') {
-          Alert.alert(
-            "Máy giặt đã hoàn thành! 🧺",
-            `${data.name || 'Máy giặt'} đã giặt xong, bạn có thể lấy quần áo.`,
-            [{ text: "OK" }]
-          );
+          // Kiểm tra lịch sử gần nhất để xác định xem đó là giặt thành công hay lỗi + hoàn tiền
+          const history = await WasherController.getLastWashHistory(washer.id);
+
+          // Prefer explicit status/notes if DB migration was applied
+          const explicitError = history && (history.status === 'error' || (history.notes && /hoàn|hoan|hoàn lại|hoan lai/i.test(history.notes)));
+
+          if (explicitError || (history && history.cost === 0 && history.end_time)) {
+            // Trường hợp: explicit ghi nhận lỗi/hoàn tiền, hoặc heuristic cost===0 + end_time
+            const note = history?.notes ? `\nGhi chú: ${history.notes}` : "\nLượt giặt miễn phí đã được hoàn lại vào tài khoản của bạn.";
+            Alert.alert(
+              "❌ Giặt không thành công",
+              `${data.name || 'Máy giặt'} gặp lỗi trong quá trình giặt.${note}`,
+              [{ text: "OK" }]
+            );
+          } else {
+            Alert.alert(
+              "✅ Giặt thành công!",
+              `${data.name || 'Máy giặt'} đã giặt xong, bạn có thể lấy quần áo.`,
+              [{ text: "OK" }]
+            );
+          }
           clearInterval(statusInterval);
+          
+          // Refresh user info để cập nhật số lượt giặt
+          DeviceEventEmitter.emit("userUpdated");
         } else if (data?.status === 'error') {
-          Alert.alert(
-            "❌ Máy giặt gặp sự cố",
-            "Vui lòng liên hệ nhân viên để được hỗ trợ.",
-            [{ text: "OK" }]
-          );
+          const history = await WasherController.getLastWashHistory(washer.id);
+
+          // If DB includes notes/status, show them; otherwise fallback to cost heuristic
+          if (history && (history.status === 'error' || history.notes)) {
+            const message = history.notes
+              ? `${history.notes}`
+              : "Máy giặt gặp lỗi. Lượt giặt miễn phí đã được hoàn lại vào tài khoản của bạn.";
+            Alert.alert("❌ Máy giặt gặp sự cố", message, [{ text: "OK" }]);
+          } else {
+            Alert.alert(
+              "❌ Máy giặt gặp sự cố",
+              history && history.cost === 0
+                ? "Máy giặt gặp lỗi.\nLượt giặt miễn phí đã được hoàn lại vào tài khoản của bạn."
+                : "Vui lòng liên hệ nhân viên để được hỗ trợ.",
+              [{ text: "OK" }]
+            );
+          }
           clearInterval(statusInterval);
+          
+          // Refresh user info để cập nhật số lượt giặt
+          DeviceEventEmitter.emit("userUpdated");
         }
       };
 

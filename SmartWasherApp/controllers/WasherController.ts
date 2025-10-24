@@ -14,6 +14,19 @@ export interface WasherInfo {
   weight: number;
 }
 
+export interface WashHistory {
+  id: number;
+  user_id: number;
+  washer_id: number;
+  cost: number;
+  requested_at: string;
+  start_time?: string;
+  end_time?: string;
+  // Optional fields added by a DB migration; keep optional to remain backward-compatible
+  status?: string | null;
+  notes?: string | null;
+}
+
 export interface CreateWasherDto {
   id?: number;
   name: string;
@@ -90,7 +103,10 @@ export const WasherController = {
   },
 
   async remove(id: number): Promise<void> {
-    await client.delete(`/api/washers/${id}`);
+    const res = await client.delete(`/api/washers/${id}`);
+    if (!res.data?.success) {
+      throw new Error(res.data?.message || 'Không thể xóa máy giặt');
+    }
   },
 
   /** ================== 💰 TÍNH TIỀN & LƯU LỊCH SỬ ================== */
@@ -185,5 +201,19 @@ export const WasherController = {
     const res = await client.get(`/api/washers/${id}/command`);
     console.log(`📨 [ESP32 ← Server] Lấy lệnh của máy #${id}:`, res.data.command);
     return res.data;
+  },
+
+  async getLastWashHistory(washer_id: number): Promise<WashHistory | null> {
+    try {
+      const res = await client.get(`/api/wash-history/last/${washer_id}`);
+      // Server will include status/notes only if the DB has those columns; keep them optional
+      if (res.data?.success && res.data?.history) {
+        return res.data.history;
+      }
+      return null;
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy lịch sử giặt:", err);
+      return null;
+    }
   },
 };

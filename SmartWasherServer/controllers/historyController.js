@@ -1,6 +1,125 @@
 import db from "../db.js";
 
 export const HistoryController = {
+  // Lấy lịch sử giặt cuối cùng của một máy giặt
+  async getLastWashHistory(req, res) {
+    const { washer_id } = req.params;
+    try {
+      // Dynamically include status/notes if columns exist in DB
+      const [cols] = await db.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wash_history' AND COLUMN_NAME IN ('status','notes')`
+      );
+      const hasStatus = cols.some(c => c.COLUMN_NAME === 'status');
+      const hasNotes = cols.some(c => c.COLUMN_NAME === 'notes');
+
+      const selectCols = [
+        "h.id",
+        "h.user_id",
+        "h.washer_id",
+        "h.cost",
+        "DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') as requested_at",
+        "DATE_FORMAT(h.start_time, '%Y-%m-%d %H:%i') as start_time",
+        "DATE_FORMAT(h.end_time, '%Y-%m-%d %H:%i') as end_time",
+      ];
+      if (hasStatus) selectCols.push("h.status");
+      if (hasNotes) selectCols.push("h.notes");
+      selectCols.push("w.name as washer_name");
+
+      const sql = `SELECT ${selectCols.join(', ')} FROM wash_history h JOIN washer w ON w.id = h.washer_id WHERE h.washer_id = ? ORDER BY h.requested_at DESC LIMIT 1`;
+      const [rows] = await db.execute(sql, [washer_id]);
+
+      if (rows.length === 0) {
+        return res.json({ 
+          success: true, 
+          history: null 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        history: rows[0] 
+      });
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy lịch sử giặt cuối:", err);
+      res.status(500).json({ 
+        success: false, 
+        message: "Lỗi server khi lấy lịch sử" 
+      });
+    }
+  },
+  // Helper function: Trả lại lượt giặt và ghi nhận lỗi
+  async refundWashForError(washer_id) {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // 1. Tìm lịch sử giặt gần nhất của máy này
+      const [history] = await conn.execute(
+        `SELECT * FROM wash_history 
+         WHERE washer_id = ? 
+         ORDER BY requested_at DESC 
+         LIMIT 1`,
+        [washer_id]
+      );
+
+      if (history && history.length > 0) {
+        const lastWash = history[0];
+        
+        // 2. Hoàn trả lượt giặt miễn phí (nếu đã dùng lượt miễn phí)
+        if (lastWash.cost === 0) {
+          await conn.execute(
+            `UPDATE user 
+             SET free_washes_left = IFNULL(free_washes_left, 0) + 1,
+                 total_washes = GREATEST(IFNULL(total_washes, 0) - 1, 0)
+             WHERE id = ?`,
+            [lastWash.user_id]
+          );
+          console.log(`💰 Đã hoàn lại lượt giặt miễn phí cho user ${lastWash.user_id}`);
+        }
+
+        // 3. Ghi lại thời điểm kết thúc (end_time) để đánh dấu giao dịch đã xử lý
+        await conn.execute(
+          `UPDATE wash_history 
+           SET end_time = NOW()
+           WHERE id = ?`,
+          [lastWash.id]
+        );
+
+        // 4. Nếu bảng có cột status/notes thì ghi thêm thông tin refund để client có thể hiển thị rõ ràng
+        const [cols] = await conn.execute(
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wash_history' AND COLUMN_NAME IN ('status','notes')`
+        );
+        const hasStatus = cols.some(c => c.COLUMN_NAME === 'status');
+        const hasNotes = cols.some(c => c.COLUMN_NAME === 'notes');
+        if (hasStatus || hasNotes) {
+          const parts = [];
+          const params = [];
+          if (hasStatus) {
+            parts.push("status = ?");
+            params.push('error');
+          }
+          if (hasNotes) {
+            parts.push("notes = ?");
+            params.push('Máy giặt gặp lỗi - Đã hoàn lại lượt giặt');
+          }
+          parts.push("end_time = NOW()");
+          const updateSql = `UPDATE wash_history SET ${parts.join(', ')} WHERE id = ?`;
+          params.push(lastWash.id);
+          await conn.execute(updateSql, params);
+        }
+      }
+
+      await conn.commit();
+      return true;
+    } catch (err) {
+      await conn.rollback();
+      console.error("❌ Lỗi khi hoàn trả lượt giặt:", err);
+      return false;
+    } finally {
+      conn.release();
+    }
+  },
+
   async getUserHistory(req, res) {
     const { userId } = req.params;
     try {
@@ -82,4 +201,7 @@ export const HistoryController = {
       return res.status(500).json({ success: false, message: "Lỗi server" });
     }
   },
+  // duplicate/refactor placeholder - refundWashForError implemented above; no-op here
 };
+
+

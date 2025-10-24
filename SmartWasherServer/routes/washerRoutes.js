@@ -23,6 +23,8 @@ router.get("/", (req, res, next) => {
 });
 router.post("/", postWasher);
 router.put("/:id", putWasher);
+
+// Đảm bảo delete route được đặt ở đây, trước các route khác có :id
 router.delete("/:id", deleteWasherCtrl);
 
 // ==== ESP COMMAND ENDPOINTS ====
