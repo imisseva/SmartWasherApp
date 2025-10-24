@@ -81,6 +81,31 @@ export default function WasherInfo() {
 
       // 2. Tính tiền và lưu lịch sử
       const totalCost = await WasherController.calculateAndSaveWash(kg, washer);
+      
+      // 3. Bắt đầu polling để kiểm tra trạng thái máy giặt
+      const checkWasherStatus = async () => {
+        const data = await WasherController.getWasherById(washer.id);
+        
+        // Nếu máy giặt xong (available) hoặc gặp lỗi
+        if (data?.status === 'available') {
+          Alert.alert(
+            "Máy giặt đã hoàn thành! 🧺",
+            `${data.name || 'Máy giặt'} đã giặt xong, bạn có thể lấy quần áo.`,
+            [{ text: "OK" }]
+          );
+          clearInterval(statusInterval);
+        } else if (data?.status === 'error') {
+          Alert.alert(
+            "❌ Máy giặt gặp sự cố",
+            "Vui lòng liên hệ nhân viên để được hỗ trợ.",
+            [{ text: "OK" }]
+          );
+          clearInterval(statusInterval);
+        }
+      };
+
+      // Kiểm tra mỗi 5 giây
+      const statusInterval = setInterval(checkWasherStatus, 5000);
 
       // 3. Hiển thị thông báo và theo dõi trạng thái
       Alert.alert(
