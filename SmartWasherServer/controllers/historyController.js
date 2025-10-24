@@ -50,6 +50,7 @@ export const HistoryController = {
   // Helper function: Trả lại lượt giặt và ghi nhận lỗi
   async refundWashForError(washer_id) {
     const conn = await db.getConnection();
+    let refundedUserId = null;
     try {
       await conn.beginTransaction();
 
@@ -74,6 +75,7 @@ export const HistoryController = {
              WHERE id = ?`,
             [lastWash.user_id]
           );
+          refundedUserId = lastWash.user_id;
           console.log(`💰 Đã hoàn lại lượt giặt miễn phí cho user ${lastWash.user_id}`);
         }
 
@@ -110,11 +112,20 @@ export const HistoryController = {
       }
 
       await conn.commit();
-      return true;
+      
+      // Trả về thông tin về user được refund
+      return {
+        success: true,
+        userId: refundedUserId,
+        message: `Đã hoàn lại lượt giặt cho user ${refundedUserId}`
+      };
     } catch (err) {
       await conn.rollback();
       console.error("❌ Lỗi khi hoàn trả lượt giặt:", err);
-      return false;
+      return {
+        success: false,
+        error: err.message
+      };
     } finally {
       conn.release();
     }
@@ -133,6 +144,7 @@ export const HistoryController = {
           DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') AS date,
           h.cost,
           CASE 
+            WHEN h.status = 'error' THEN 'Lỗi'
             WHEN h.cost = 0 THEN 'Miễn phí'
             ELSE 'Hoàn thành'
           END AS status
