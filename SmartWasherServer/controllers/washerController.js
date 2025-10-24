@@ -241,23 +241,23 @@ export const updateWasherStatus = async (req, res) => {
 
     const statusStr = String(status);
     const resetCommands = ["10", "11", "20", "21"];
-   const isReset = resetCommands.includes(statusStr);
+    const isReset = resetCommands.includes(statusStr);
 
-  if (isReset) {
-    // Chỉ reset máy đang gửi chứ không reset tất cả
-    const [rows] = await db.execute(
-      "UPDATE washer SET status = 'available', ip_address = ?, last_used = NOW() WHERE id = ?",
-      [ip, washer_id]
-    );
+    if (isReset) {
+      // Chỉ reset máy đang gửi chứ không reset tất cả
+      const [rows] = await db.execute(
+        "UPDATE washer SET status = 'available', ip_address = ?, last_used = NOW() WHERE id = ?",
+        [ip, washer_id]
+      );
 
-    if (!rows?.affectedRows) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt để reset" });
-    }
+      if (!rows?.affectedRows) {
+        return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt để reset" });
+      }
 
-  console.log(`🔁 Máy ${washer_id} đã được đặt lại về 'available'`);
-  currentCommand = null;
-  return res.send("0");
-}
+    console.log(`🔁 Máy ${washer_id} đã được đặt lại về 'available'`);
+    currentCommand = null;
+    return res.send("0");
+  }
 
 
     // 👇 Trường hợp không phải mã đặc biệt → cập nhật riêng máy đang gửi

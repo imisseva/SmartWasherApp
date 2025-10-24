@@ -134,8 +134,6 @@ export async function updateAdminUser({ id, username, password, role, name, emai
   }
 }
 
-
-
 /** Xoá user + account (transaction) */
 export async function deleteAdminUser(id) {
   const conn = await db.getConnection();
@@ -157,30 +155,4 @@ export async function deleteAdminUser(id) {
   } finally {
     conn.release();
   }
-}
-
-export async function resetWeeklyFreeWashes(count = 7) {
-  try {
-    const [res] = await db.execute(
-      `UPDATE user SET free_washes_left = ?, last_reset = CURRENT_TIMESTAMP()`,
-      [Number(count)]
-    );
-    console.log(`✅ Đã reset ${res.affectedRows} tài khoản về ${count} lượt giặt miễn phí`);
-    return res;
-  } catch (err) {
-    console.error("❌ Lỗi khi reset lượt giặt:", err);
-    throw err;
-  }
-}
-
-// Lấy user kèm account (dùng cho /api/me)
-export async function getUserByAccountIdJoined(accountId) {
-  const [rows] = await db.execute(
-    `SELECT u.*, a.username, a.role
-     FROM user u
-     JOIN account a ON a.id = u.account_id
-     WHERE a.id = ? LIMIT 1`,
-    [accountId]
-  );
-  return rows[0] ?? null;
 }

@@ -2,7 +2,6 @@
 import { getAccountByUsername } from "../models/account.js";
 import { getUserByAccountId, createUserWithAccount } from "../models/User.js";
 import jwt from "jsonwebtoken";
-import { getUserByAccountIdJoined } from "../models/User.js"; // import ở đầu file cùng import hiện có
 
 export async function login(req, res) {
   const { username, password } = req.body;
@@ -106,30 +105,5 @@ export async function register(req, res) {
     }
 
     return res.status(statusCode).json({ success: false, message });
-  }
-}
-export async function me(req, res) {
-  try {
-    const h = req.headers.authorization || "";
-    const [typ, token] = h.split(" ");
-    if (typ !== "Bearer" || !token) return res.status(401).json({ success: false, message: "Missing token" });
-
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
-    } catch (e) {
-      return res.status(401).json({ success: false, message: "Invalid token" });
-    }
-
-    const accountId = payload.id;
-    if (!accountId) return res.status(400).json({ success: false, message: "Invalid token payload" });
-
-    const user = await getUserByAccountIdJoined(accountId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    res.json({ success: true, user });
-  } catch (err) {
-    console.error("me error:", err);
-    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 }
