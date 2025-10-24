@@ -33,6 +33,8 @@ export default function UsersScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<AdminUserVM | null>(null);
   const [saving, setSaving] = useState(false);
+  // Static variable for testing: change this to test different reset values
+  const DEFAULT_FREE_WASHES = 7;
 
   const load = async () => {
     const data = await UserController.list();
@@ -112,6 +114,9 @@ export default function UsersScreen() {
         <Text style={styles.rowTitle}>{item.username}</Text>
         <Text style={styles.rowSub}>
           {item.name || "-"} · {item.email || "-"} · {item.phone || "-"}
+        </Text>
+        <Text style={styles.freeWashes}>
+          Lượt miễn phí: {typeof item.free_washes_left === 'number' ? item.free_washes_left : '-'}
         </Text>
         <Text
           style={[
@@ -196,11 +201,11 @@ export default function UsersScreen() {
         onPress={() => {
           Alert.alert("Xác nhận", "Reset lượt giặt miễn phí cho tất cả user về 7?", [
             { text: "Huỷ", style: "cancel" },
-            { text: "Reset", style: "destructive", onPress: async () => {
+              { text: "Reset", style: "destructive", onPress: async () => {
               try {
-                const res = await client.post('/api/test/reset-washes');
+                const res = await client.post('/api/test/reset-washes', { default: DEFAULT_FREE_WASHES });
                 if (res.data?.success) {
-                  Alert.alert('✅ Thành công', res.data.message || 'Đã reset');
+                  Alert.alert('✅ Thành công', res.data.message || `Đã reset về ${DEFAULT_FREE_WASHES}`);
                   await load();
                 } else {
                   Alert.alert('❌ Lỗi', res.data?.message || 'Reset thất bại');
@@ -268,6 +273,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
   rowSub: { marginTop: 4, color: "#4b5563" },
+  freeWashes: { marginTop: 6, color: "#0b8650", fontWeight: "700" },
   role: {
     marginTop: 8,
     alignSelf: "flex-start",

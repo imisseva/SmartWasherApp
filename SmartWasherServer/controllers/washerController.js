@@ -1,5 +1,6 @@
 // controllers/washerController.js
 import db from "../db.js";
+import { HistoryController } from "./historyController.js";
 import {
   listWashers,
   createWasher,
@@ -213,9 +214,7 @@ export const getWasherCommand = async (req, res) => {
     }
 
     console.log("🤖 ESP hỏi lệnh ->", result);
-
-    // ✅ Reset lệnh luôn sau khi gửi
-    currentCommand = null;
+    // Không reset currentCommand ở đây, chỉ reset khi nhận mã hoàn tất từ ESP
     res.send(result);
   } catch (err) {
     console.error("getWasherCommand error:", err);
@@ -225,56 +224,110 @@ export const getWasherCommand = async (req, res) => {
 
 // ESP báo trạng thái thực tế
 export const updateWasherStatus = async (req, res) => {
-  console.log("📥 ESP gửi status:", req.body);
+  console.log("📥 ESP gửi status:", {
+    body: req.body,
+    params: req.params,
+    currentCommand
+  });
   try {
-    const washer_id_raw = req.params.id ?? req.body?.washer_id ?? req.body?.id;
+    // Lấy washer_id từ nhiều nguồn (theo thứ tự ưu tiên):
+    let washer_id = 0;
+    // 1. URL param
+    if (req.params && req.params.id && !isNaN(Number(req.params.id)) && Number(req.params.id) > 0) {
+      washer_id = Number(req.params.id);
+    }
+    // 2. Body
+    if (!washer_id && req.body) {
+      if (req.body.washer_id && !isNaN(Number(req.body.washer_id)) && Number(req.body.washer_id) > 0) {
+        washer_id = Number(req.body.washer_id);
+      } else if (req.body.id && !isNaN(Number(req.body.id)) && Number(req.body.id) > 0) {
+        washer_id = Number(req.body.id);
+      }
+    }
+    // 3. currentCommand
+    if (!washer_id && currentCommand) {
+      const match = currentCommand.match(/START_(\d+)/);
+      if (match && !isNaN(Number(match[1])) && Number(match[1]) > 0) {
+        washer_id = Number(match[1]);
+        console.log(`ℹ️ Lấy ID từ currentCommand: ${washer_id}`);
+      }
+    }
     const status = req.body?.status;
     const ip = req.body?.ip ?? null;
-
-    const washer_id = Number(washer_id_raw);
-    if (!washer_id || isNaN(washer_id)) {
-      return res.status(400).json({ success: false, message: `ID không hợp lệ: ${washer_id_raw}` });
-    }
-    if (!status) {
-      return res.status(400).json({ success: false, message: "Thiếu trạng thái (status)" });
-    }
-
-    const statusStr = String(status);
+    // 1. Parse và validate status
+    const statusStr = String(status).trim();
+    console.log(`📊 Xử lý status cho máy ${washer_id}:`, {
+      receivedStatus: statusStr,
+      currentCommand,
+      washer_id
+    });
+    // 2. Kiểm tra mã đặc biệt (10/11/20/21)
     const resetCommands = ["10", "11", "20", "21"];
     const isReset = resetCommands.includes(statusStr);
-
     if (isReset) {
-      // Chỉ reset máy đang gửi chứ không reset tất cả
-      const [rows] = await db.execute(
-        "UPDATE washer SET status = 'available', ip_address = ?, last_used = NOW() WHERE id = ?",
-        [ip, washer_id]
-      );
+      console.log(`✨ Nhận mã hoàn tất ${statusStr}, tiến hành reset máy ${washer_id}`);
+      // Các mã 10/20: lỗi; 11/21: thành công (theo firmware)
+      const errorCodes = ["10", "20"];
+      const successCodes = ["11", "21"];
 
-      if (!rows?.affectedRows) {
-        return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt để reset" });
+      if (washer_id && !isNaN(washer_id) && washer_id > 0) {
+        // Reset máy về trạng thái sẵn sàng nếu xác định được ID
+        const [rows] = await db.execute(
+          "UPDATE washer SET status = 'available', ip_address = ?, last_used = NOW() WHERE id = ?",
+          [ip, washer_id]
+        );
+        if (!rows?.affectedRows) {
+          console.error(`❌ Reset thất bại: Không tìm thấy máy ${washer_id}`);
+        } else {
+          console.log(`✅ Đã reset máy ${washer_id}:`, {
+            previousCommand: currentCommand,
+            newStatus: 'available'
+          });
+        }
+
+        // Nếu là mã lỗi, gọi refund logic để hoàn lại lượt giặt và ghi history.status
+        if (errorCodes.includes(statusStr)) {
+          try {
+            console.log(`🔁 Mã ${statusStr} được xác định là LỖI — thực hiện refund cho máy ${washer_id}`);
+            await HistoryController.refundWashForError(washer_id);
+          } catch (e) {
+            console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
+          }
+        } else if (successCodes.includes(statusStr)) {
+          console.log(`ℹ️ Mã ${statusStr} được xác định là THÀNH CÔNG`);
+        }
+      } else {
+        // Không xác định được ID, vẫn trả về "0" để ESP dừng
+        console.error(`❌ Không thể xác định ID máy giặt khi nhận mã hoàn tất:`, {
+          urlParams: req.params,
+          body: req.body,
+          currentCommand
+        });
       }
-
-    console.log(`🔁 Máy ${washer_id} đã được đặt lại về 'available'`);
-    currentCommand = null;
-    return res.send("0");
-  }
-
-
-    // 👇 Trường hợp không phải mã đặc biệt → cập nhật riêng máy đang gửi
+      // Reset command về null và đảm bảo getWasherCommand trả về "0" cho ESP
+      currentCommand = null;
+      return res.send("0");
+    }
+    // 5. Trường hợp status thông thường
+    console.log(`ℹ️ Status ${statusStr} không phải mã hoàn tất, cập nhật status bình thường`);
     const [rows] = await db.execute(
-      "UPDATE washer SET status=?, ip_address=?, last_used=NOW() WHERE id=?",
+      "UPDATE washer SET status = ?, ip_address = ?, last_used = NOW() WHERE id = ?",
       [status, ip, washer_id]
     );
-
     if (!rows?.affectedRows) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy máy giặt"
+      });
     }
-
     console.log(`📡 ESP cập nhật Máy ${washer_id} → ${status} (${ip || "no ip"})`);
     res.json({ success: true, washer_id, status });
   } catch (err) {
     console.error("updateWasherStatus error:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 

@@ -1,5 +1,5 @@
 // controllers/authController.js
-import { getAccountByUsername } from "../models/account.js";
+import { getAccountByUsername } from "../models/Account.js";
 import { getUserByAccountId, createUserWithAccount } from "../models/User.js";
 import jwt from "jsonwebtoken";
 

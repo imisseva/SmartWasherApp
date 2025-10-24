@@ -11,5 +11,5 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-export default pool;
 console.log("✅ MySQL pool created (smartwasher)");
+export default pool;
