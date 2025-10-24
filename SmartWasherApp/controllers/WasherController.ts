@@ -1,6 +1,7 @@
 import client from "../constants/api";
 import { Washer } from "../models/Washer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 
 export type WasherStatus = "available" | "running" | "error";
 
@@ -150,11 +151,34 @@ export const WasherController = {
 
   async updateWasherStatus(id: number, status: WasherStatus, ip?: string): Promise<void> {
     console.log(`📶 [ESP32 → Server] Cập nhật trạng thái máy #${id}: ${status} (${ip || "no IP"})`);
+    
+    // Lấy thông tin máy giặt trước khi cập nhật
+    const oldData = await this.getWasherById(id);
+    
+    // Gọi API cập nhật trạng thái
     await client.put("/api/washers/update-status", {
       washer_id: id,
       status,
       ip,
     });
+
+    // Nếu trạng thái mới là "available" và trạng thái cũ khác "available" -> máy vừa giặt xong
+    if (status === "available" && oldData?.status !== "available") {
+      Alert.alert(
+        "Máy giặt đã hoàn thành! 🧺",
+        `${oldData?.name || 'Máy giặt'} đã giặt xong, bạn có thể lấy quần áo.`,
+        [{ text: "OK" }],
+        { cancelable: true }
+      );
+    }
+    // Nếu có lỗi xảy ra
+    else if (status === "error") {
+      Alert.alert(
+        "❌ Máy giặt gặp sự cố",
+        "Vui lòng liên hệ nhân viên để được hỗ trợ.",
+        [{ text: "OK" }]
+      );
+    }
   },
 
   async getWasherCommand(id: number): Promise<{ command: string }> {
