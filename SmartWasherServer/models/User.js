@@ -156,3 +156,12 @@ export async function deleteAdminUser(id) {
     conn.release();
   }
 }
+
+/** Reset số lượt giặt miễn phí về mặc định */
+export async function resetWeeklyFreeWashes(defaultWashes = 7) {
+  const [result] = await db.execute(
+    "UPDATE user SET free_washes_left = ?",
+    [defaultWashes]
+  );
+  return result.affectedRows;
+}
