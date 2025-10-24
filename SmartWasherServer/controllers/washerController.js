@@ -289,7 +289,7 @@ export const updateWasherStatus = async (req, res) => {
         if (errorCodes.includes(statusStr)) {
           try {
             console.log(`🔁 Mã ${statusStr} được xác định là LỖI — thực hiện refund cho máy ${washer_id}`);
-            await HistoryController.refundWashForError(washer_id);
+              await HistoryController.refundWashForError(washer_id);
           } catch (e) {
             console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
           }
@@ -351,6 +351,16 @@ export const receiveResultFromESP = async (req, res) => {
       "UPDATE washer SET status=?, last_used=NOW() WHERE id=?",
       [result == 0 ? "available" : "error", washer_id]
     );
+
+    // Nếu result không phải 0 (có lỗi), thực hiện refund
+    if (result !== 0) {
+      try {
+        console.log(`🔁 Máy ${washer_id} báo lỗi — thực hiện refund`);
+        await HistoryController.refundWashForError(washer_id);
+      } catch (e) {
+        console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
+      }
+    }
 
     // ✅ Tự động tắt command sau khi nhận kết quả
     currentCommand = null;

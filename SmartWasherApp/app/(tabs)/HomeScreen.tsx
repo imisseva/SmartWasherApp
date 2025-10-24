@@ -25,16 +25,48 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const data = await AsyncStorage.getItem("user");
-      if (data) setUser(JSON.parse(data));
+      try {
+        const data = await AsyncStorage.getItem("user");
+        if (data) {
+          const userData = JSON.parse(data);
+          // Lấy thông tin mới nhất từ API (nếu đã login và token có trong AsyncStorage)
+          try {
+            const response = await client.get(`/api/auth/me`);
+            if (response.data?.success) {
+              const updatedUser = response.data.user;
+              // Cập nhật vào AsyncStorage
+              await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+              setUser(updatedUser);
+            } else {
+              setUser(userData);
+            }
+          } catch {
+            // Nếu API /me thất bại, fallback về dữ liệu cục bộ
+            setUser(userData);
+          }
+        }
+      } catch (error) {
+        console.warn("Không thể cập nhật thông tin user:", error);
+        const data = await AsyncStorage.getItem("user");
+        if (data) setUser(JSON.parse(data));
+      }
       setLoading(false);
     };
+
     fetchUser();
-    const sub = DeviceEventEmitter.addListener("historyUpdated", async () => {
-      const data = await AsyncStorage.getItem("user");
-      if (data) setUser(JSON.parse(data));
-    });
-    return () => sub.remove();
+
+    // Lắng nghe sự kiện historyUpdated và userUpdated để cập nhật thông tin ngay lập tức
+    const subHistory = DeviceEventEmitter.addListener("historyUpdated", fetchUser);
+    const subUser = DeviceEventEmitter.addListener("userUpdated", fetchUser);
+
+    // Auto-refresh thông tin user mỗi 10 giây (để cập nhật sau refund nếu client không ở màn WasherInfo)
+    const refreshInterval = setInterval(fetchUser, 10000);
+
+    return () => {
+      subHistory.remove();
+      subUser.remove();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   // ===== Đăng xuất =====
