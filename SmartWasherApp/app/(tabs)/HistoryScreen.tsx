@@ -38,7 +38,9 @@ export default function HistoryScreen() {
         <Text
           style={[
             styles.status,
-            { color: item.cost === 0 ? "#2ecc71" : "#4B8BF5" },
+            item.status.includes("Lỗi") ? styles.errorStatus :
+            item.cost === 0 ? styles.freeStatus :
+            styles.paidStatus
           ]}
         >
           {item.status}
@@ -109,6 +111,15 @@ const styles = StyleSheet.create({
   status: {
     fontWeight: "600",
     fontSize: 14,
+  },
+  errorStatus: {
+    color: "#e74c3c",  // Màu đỏ cho trạng thái lỗi
+  },
+  freeStatus: {
+    color: "#2ecc71",  // Màu xanh lá cho lượt giặt miễn phí
+  },
+  paidStatus: {
+    color: "#4B8BF5",  // Màu xanh dương cho lượt giặt thường
   },
   date: {
     fontSize: 14,

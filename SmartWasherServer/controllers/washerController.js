@@ -266,9 +266,9 @@ export const updateWasherStatus = async (req, res) => {
     const isReset = resetCommands.includes(statusStr);
     if (isReset) {
       console.log(`✨ Nhận mã hoàn tất ${statusStr}, tiến hành reset máy ${washer_id}`);
-      // Các mã 10/20: lỗi; 11/21: thành công (theo firmware)
-      const errorCodes = ["10", "20"];
-      const successCodes = ["11", "21"];
+      // Các mã 11/21: lỗi; 10/20: thành công (theo firmware)
+      const errorCodes = ["11", "21"];
+      const successCodes = ["10", "20"];
 
       if (washer_id && !isNaN(washer_id) && washer_id > 0) {
         // Reset máy về trạng thái sẵn sàng nếu xác định được ID
