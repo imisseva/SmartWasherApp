@@ -200,7 +200,8 @@ export const stopWasher = async (req, res) => {
 };
 
 // ESP hỏi lệnh
-// ESP hỏi lệnh
+// ESP hỏi lệnh: chỉ gửi START_1 hoặc START_2 1 lần, sau đó reset về 0
+// ESP hỏi lệnh: chỉ gửi START_1 hoặc START_2 cho đến khi ESP báo hoàn tất
 export const getWasherCommand = async (req, res) => {
   try {
     let result = "0";
@@ -212,54 +213,64 @@ export const getWasherCommand = async (req, res) => {
     }
 
     console.log("🤖 ESP hỏi lệnh ->", result);
-    
-    // Chỉ reset command khi ESP đã nhận và bắt đầu giặt (sẽ gửi status=running)
-    res.send(result);
 
+    // ✅ Reset lệnh luôn sau khi gửi
+    currentCommand = null;
+    res.send(result);
   } catch (err) {
     console.error("getWasherCommand error:", err);
     res.status(500).send("0");
   }
 };
 
-
 // ESP báo trạng thái thực tế
 export const updateWasherStatus = async (req, res) => {
-  console.log("📥 ESP body:", req.body, "params:", req.params);
+  console.log("📥 ESP gửi status:", req.body);
   try {
     const washer_id_raw = req.params.id ?? req.body?.washer_id ?? req.body?.id;
-    const washer_id = Number(washer_id_raw);
     const status = req.body?.status;
     const ip = req.body?.ip ?? null;
 
+    const washer_id = Number(washer_id_raw);
     if (!washer_id || isNaN(washer_id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: `ID không hợp lệ: ${washer_id_raw}` });
+      return res.status(400).json({ success: false, message: `ID không hợp lệ: ${washer_id_raw}` });
     }
     if (!status) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Thiếu trạng thái (status)" });
+      return res.status(400).json({ success: false, message: "Thiếu trạng thái (status)" });
     }
 
+    const statusStr = String(status);
+    const resetCommands = ["10", "11", "20", "21"];
+   const isReset = resetCommands.includes(statusStr);
+
+  if (isReset) {
+    // Chỉ reset máy đang gửi chứ không reset tất cả
+    const [rows] = await db.execute(
+      "UPDATE washer SET status = 'available', ip_address = ?, last_used = NOW() WHERE id = ?",
+      [ip, washer_id]
+    );
+
+    if (!rows?.affectedRows) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt để reset" });
+    }
+
+  console.log(`🔁 Máy ${washer_id} đã được đặt lại về 'available'`);
+  currentCommand = null;
+  return res.send("0");
+}
+
+
+    // 👇 Trường hợp không phải mã đặc biệt → cập nhật riêng máy đang gửi
     const [rows] = await db.execute(
       "UPDATE washer SET status=?, ip_address=?, last_used=NOW() WHERE id=?",
       [status, ip, washer_id]
     );
+
     if (!rows?.affectedRows) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy máy giặt" });
+      return res.status(404).json({ success: false, message: "Không tìm thấy máy giặt" });
     }
 
-    console.log(
-      `📡 ESP cập nhật Washer ${washer_id} → ${status} (${ip || "no ip"})`
-    );
-
-    // ✅ Reset command sau khi ESP báo trạng thái
-    currentCommand = null;
-
+    console.log(`📡 ESP cập nhật Máy ${washer_id} → ${status} (${ip || "no ip"})`);
     res.json({ success: true, washer_id, status });
   } catch (err) {
     console.error("updateWasherStatus error:", err);

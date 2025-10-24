@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 23, 2025 at 05:22 PM
+-- Generation Time: Oct 24, 2025 at 11:13 AM
 -- Server version: 8.0.41
 -- PHP Version: 8.0.30
 
@@ -47,7 +47,8 @@ INSERT INTO `account` (`id`, `username`, `password`, `role`, `created_at`) VALUE
 (2, 'linh99', '12345', 'user', '2025-10-12 23:59:38'),
 (3, 'admin', 'admin123', 'admin', '2025-10-12 23:59:38'),
 (4, 'trp123', '1234', 'user', '2025-10-18 04:04:32'),
-(5, 'dang123', '1234', 'user', '2025-10-20 18:22:33');
+(5, 'dang123', '1234', 'user', '2025-10-20 18:22:33'),
+(6, 'trp234', '1234', 'user', '2025-10-24 13:52:52');
 
 -- --------------------------------------------------------
 
@@ -123,10 +124,11 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id`, `account_id`, `name`, `email`, `phone`, `total_washes`, `free_washes_left`, `created_at`, `last_reset`) VALUES
-(1, 1, 'Nguyễn Phong', 'phong@example.com', '0901234567', 1, 3, '2025-10-12 23:59:38', '2025-10-23 22:21:31'),
-(2, 2, 'Hoàng Linh', 'linh@example.com', '0909999999', 8, 0, '2025-10-12 23:59:38', '2025-10-23 22:21:31'),
-(3, 4, 'phong nguyen', 'trp@example.com', '0979520852', 9, 0, '2025-10-18 04:04:32', '2025-10-23 22:21:31'),
-(4, 5, 'Đăng', 'dang@example.com', '0979520855', 3, 1, '2025-10-20 18:22:33', '2025-10-23 22:21:31');
+(1, 1, 'Nguyễn Phong', 'phong@example.com', '0901234567', 1, 7, '2025-10-12 23:59:38', '2025-10-24 15:00:23'),
+(2, 2, 'Hoàng Linh', 'linh@example.com', '0909999999', 25, 2, '2025-10-12 23:59:38', '2025-10-24 15:00:23'),
+(3, 4, 'phong nguyen', 'trp@example.com', '0979520852', 9, 7, '2025-10-18 04:04:32', '2025-10-24 15:00:23'),
+(4, 5, 'Đăng', 'dang@example.com', '0979520855', 4, 7, '2025-10-20 18:22:33', '2025-10-24 15:00:23'),
+(5, 6, 'phong nguyen', 'trp234@gmail.com', '0123456789', 2, 7, '2025-10-24 13:52:52', '2025-10-24 15:00:23');
 
 -- --------------------------------------------------------
 
@@ -151,9 +153,9 @@ CREATE TABLE `washer` (
 --
 
 INSERT INTO `washer` (`id`, `name`, `location`, `weight`, `price`, `status`, `ip_address`, `last_used`) VALUES
-(1, 'Máy giặt 1', 'Ký túc xá A', 8, 15000.00, 'available', '10.13.37.2', '2025-10-23 22:12:53'),
-(2, 'Máy giặt B', 'Ký túc xá B', 10, 15000.00, 'available', '172.20.10.11', '2025-10-23 22:09:31'),
-(3, 'Máy giặt C', 'Ký túc xá C', 7, 10000.00, 'running', '127.1.1.8', NULL);
+(1, 'Máy giặt 1', 'Ký túc xá A', 8, 15000.00, 'available', '10.13.37.2', '2025-10-24 16:03:56'),
+(2, 'Máy giặt B', 'Ký túc xá B', 10, 15000.00, 'available', '10.13.37.2', '2025-10-23 23:17:35'),
+(3, 'Máy giặt C', 'Chung cư C', 7, 10000.00, 'available', '127.1.1.8', NULL);
 
 -- --------------------------------------------------------
 
@@ -169,71 +171,93 @@ CREATE TABLE `wash_history` (
   `requested_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `start_time` datetime DEFAULT NULL,
   `end_time` datetime DEFAULT NULL,
-  `cost` decimal(10,2) DEFAULT '0.00'
+  `cost` decimal(10,2) DEFAULT '0.00',
+  `status` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `wash_history`
 --
 
-INSERT INTO `wash_history` (`id`, `user_id`, `washer_id`, `requested_at`, `start_time`, `end_time`, `cost`) VALUES
-(1, 2, 1, '2025-10-15 22:31:08', NULL, NULL, 5625.00),
-(2, 2, 1, '2025-10-15 22:31:12', NULL, NULL, 5625.00),
-(3, 2, 1, '2025-10-15 22:42:01', NULL, NULL, 15000.00),
-(4, 2, 1, '2025-10-15 22:42:02', NULL, NULL, 15000.00),
-(5, 1, 2, '2025-10-15 22:43:02', NULL, NULL, 15000.00),
-(6, 1, 1, '2025-10-15 23:14:33', NULL, NULL, 15000.00),
-(7, 1, 1, '2025-10-16 00:23:10', NULL, NULL, 7500.00),
-(8, 1, 1, '2025-10-16 22:14:54', NULL, NULL, 9375.00),
-(9, 2, 1, '2025-10-16 22:20:59', NULL, NULL, 15000.00),
-(10, 1, 1, '2025-10-16 22:34:44', NULL, NULL, 5625.00),
-(11, 2, 1, '2025-10-16 23:17:11', NULL, NULL, 5625.00),
-(12, 1, 1, '2025-10-16 23:23:31', NULL, NULL, 5625.00),
-(13, 1, 1, '2025-10-16 23:29:51', NULL, NULL, 3750.00),
-(14, 1, 1, '2025-10-16 23:31:42', NULL, NULL, 15000.00),
-(15, 1, 1, '2025-10-16 23:39:42', NULL, NULL, 3750.00),
-(16, 1, 1, '2025-10-16 23:47:16', NULL, NULL, 15000.00),
-(17, 1, 1, '2025-10-16 23:51:23', NULL, NULL, 13125.00),
-(18, 1, 1, '2025-10-17 17:03:47', NULL, NULL, 0.00),
-(19, 1, 1, '2025-10-17 17:04:02', NULL, NULL, 0.00),
-(20, 1, 1, '2025-10-17 17:04:12', NULL, NULL, 0.00),
-(21, 1, 1, '2025-10-17 17:04:17', NULL, NULL, 0.00),
-(22, 1, 1, '2025-10-17 17:04:25', NULL, NULL, 0.00),
-(23, 2, 1, '2025-10-17 17:06:40', NULL, NULL, 0.00),
-(24, 2, 1, '2025-10-18 03:38:46', NULL, NULL, 0.00),
-(25, 2, 3, '2025-10-18 03:38:57', NULL, NULL, 0.00),
-(26, 2, 2, '2025-10-18 03:39:04', NULL, NULL, 0.00),
-(27, 2, 1, '2025-10-18 03:39:10', NULL, NULL, 0.00),
-(28, 2, 1, '2025-10-18 03:42:25', NULL, NULL, 0.00),
-(29, 2, 3, '2025-10-18 03:42:39', NULL, NULL, 0.00),
-(30, 2, 2, '2025-10-18 03:42:47', NULL, NULL, 0.00),
-(31, 2, 3, '2025-10-18 03:42:56', NULL, NULL, 0.00),
-(32, 2, 1, '2025-10-18 03:46:28', NULL, NULL, 0.00),
-(33, 2, 3, '2025-10-18 03:46:43', NULL, NULL, 0.00),
-(34, 2, 3, '2025-10-18 03:46:49', NULL, NULL, 0.00),
-(35, 2, 1, '2025-10-18 03:46:55', NULL, NULL, 0.00),
-(36, 2, 1, '2025-10-18 03:47:01', NULL, NULL, 0.00),
-(37, 1, 1, '2025-10-18 04:14:14', NULL, NULL, 0.00),
-(38, 3, 1, '2025-10-18 19:12:18', NULL, NULL, 0.00),
-(39, 3, 2, '2025-10-18 19:12:26', NULL, NULL, 0.00),
-(40, 3, 3, '2025-10-18 19:12:32', NULL, NULL, 0.00),
-(41, 3, 1, '2025-10-18 19:12:40', NULL, NULL, 0.00),
-(42, 3, 1, '2025-10-18 19:12:47', NULL, NULL, 15000.00),
-(43, 3, 1, '2025-10-19 14:55:38', NULL, NULL, 3750.00),
-(44, 4, 1, '2025-10-20 18:22:50', NULL, NULL, 0.00),
-(45, 2, 2, '2025-10-23 07:44:59', NULL, NULL, 0.00),
-(46, 2, 1, '2025-10-23 07:52:31', NULL, NULL, 0.00),
-(47, 2, 1, '2025-10-23 08:03:41', NULL, NULL, 0.00),
-(48, 2, 1, '2025-10-23 09:46:42', NULL, NULL, 0.00),
-(49, 2, 2, '2025-10-23 09:49:44', NULL, NULL, 15000.00),
-(50, 3, 1, '2025-10-23 11:45:13', NULL, NULL, 15000.00),
-(51, 3, 1, '2025-10-23 14:40:55', NULL, NULL, 15000.00),
-(52, 3, 2, '2025-10-23 15:03:25', NULL, NULL, 15000.00),
-(53, 4, 2, '2025-10-23 22:00:27', NULL, NULL, 0.00),
-(54, 4, 2, '2025-10-23 22:02:51', NULL, NULL, 0.00),
-(55, 2, 1, '2025-10-23 22:07:21', NULL, NULL, 5625.00),
-(56, 2, 1, '2025-10-23 22:08:48', NULL, NULL, 15000.00),
-(57, 2, 1, '2025-10-23 22:12:40', NULL, NULL, 15000.00);
+INSERT INTO `wash_history` (`id`, `user_id`, `washer_id`, `requested_at`, `start_time`, `end_time`, `cost`, `status`, `notes`) VALUES
+(1, 2, 1, '2025-10-15 22:31:08', NULL, NULL, 5625.00, 'pending', NULL),
+(2, 2, 1, '2025-10-15 22:31:12', NULL, NULL, 5625.00, 'pending', NULL),
+(3, 2, 1, '2025-10-15 22:42:01', NULL, NULL, 15000.00, 'pending', NULL),
+(4, 2, 1, '2025-10-15 22:42:02', NULL, NULL, 15000.00, 'pending', NULL),
+(5, 1, 2, '2025-10-15 22:43:02', NULL, NULL, 15000.00, 'pending', NULL),
+(6, 1, 1, '2025-10-15 23:14:33', NULL, NULL, 15000.00, 'pending', NULL),
+(7, 1, 1, '2025-10-16 00:23:10', NULL, NULL, 7500.00, 'pending', NULL),
+(8, 1, 1, '2025-10-16 22:14:54', NULL, NULL, 9375.00, 'pending', NULL),
+(9, 2, 1, '2025-10-16 22:20:59', NULL, NULL, 15000.00, 'pending', NULL),
+(10, 1, 1, '2025-10-16 22:34:44', NULL, NULL, 5625.00, 'pending', NULL),
+(11, 2, 1, '2025-10-16 23:17:11', NULL, NULL, 5625.00, 'pending', NULL),
+(12, 1, 1, '2025-10-16 23:23:31', NULL, NULL, 5625.00, 'pending', NULL),
+(13, 1, 1, '2025-10-16 23:29:51', NULL, NULL, 3750.00, 'pending', NULL),
+(14, 1, 1, '2025-10-16 23:31:42', NULL, NULL, 15000.00, 'pending', NULL),
+(15, 1, 1, '2025-10-16 23:39:42', NULL, NULL, 3750.00, 'pending', NULL),
+(16, 1, 1, '2025-10-16 23:47:16', NULL, NULL, 15000.00, 'pending', NULL),
+(17, 1, 1, '2025-10-16 23:51:23', NULL, NULL, 13125.00, 'pending', NULL),
+(18, 1, 1, '2025-10-17 17:03:47', NULL, NULL, 0.00, 'pending', NULL),
+(19, 1, 1, '2025-10-17 17:04:02', NULL, NULL, 0.00, 'pending', NULL),
+(20, 1, 1, '2025-10-17 17:04:12', NULL, NULL, 0.00, 'pending', NULL),
+(21, 1, 1, '2025-10-17 17:04:17', NULL, NULL, 0.00, 'pending', NULL),
+(22, 1, 1, '2025-10-17 17:04:25', NULL, NULL, 0.00, 'pending', NULL),
+(23, 2, 1, '2025-10-17 17:06:40', NULL, NULL, 0.00, 'pending', NULL),
+(24, 2, 1, '2025-10-18 03:38:46', NULL, NULL, 0.00, 'pending', NULL),
+(25, 2, 3, '2025-10-18 03:38:57', NULL, NULL, 0.00, 'pending', NULL),
+(26, 2, 2, '2025-10-18 03:39:04', NULL, NULL, 0.00, 'pending', NULL),
+(27, 2, 1, '2025-10-18 03:39:10', NULL, NULL, 0.00, 'pending', NULL),
+(28, 2, 1, '2025-10-18 03:42:25', NULL, NULL, 0.00, 'pending', NULL),
+(29, 2, 3, '2025-10-18 03:42:39', NULL, NULL, 0.00, 'pending', NULL),
+(30, 2, 2, '2025-10-18 03:42:47', NULL, NULL, 0.00, 'pending', NULL),
+(31, 2, 3, '2025-10-18 03:42:56', NULL, NULL, 0.00, 'pending', NULL),
+(32, 2, 1, '2025-10-18 03:46:28', NULL, NULL, 0.00, 'pending', NULL),
+(33, 2, 3, '2025-10-18 03:46:43', NULL, NULL, 0.00, 'pending', NULL),
+(34, 2, 3, '2025-10-18 03:46:49', NULL, NULL, 0.00, 'pending', NULL),
+(35, 2, 1, '2025-10-18 03:46:55', NULL, NULL, 0.00, 'pending', NULL),
+(36, 2, 1, '2025-10-18 03:47:01', NULL, NULL, 0.00, 'pending', NULL),
+(37, 1, 1, '2025-10-18 04:14:14', NULL, NULL, 0.00, 'pending', NULL),
+(38, 3, 1, '2025-10-18 19:12:18', NULL, NULL, 0.00, 'pending', NULL),
+(39, 3, 2, '2025-10-18 19:12:26', NULL, NULL, 0.00, 'pending', NULL),
+(40, 3, 3, '2025-10-18 19:12:32', NULL, NULL, 0.00, 'pending', NULL),
+(41, 3, 1, '2025-10-18 19:12:40', NULL, NULL, 0.00, 'pending', NULL),
+(42, 3, 1, '2025-10-18 19:12:47', NULL, NULL, 15000.00, 'pending', NULL),
+(43, 3, 1, '2025-10-19 14:55:38', NULL, NULL, 3750.00, 'pending', NULL),
+(44, 4, 1, '2025-10-20 18:22:50', NULL, NULL, 0.00, 'pending', NULL),
+(45, 2, 2, '2025-10-23 07:44:59', NULL, NULL, 0.00, 'pending', NULL),
+(46, 2, 1, '2025-10-23 07:52:31', NULL, NULL, 0.00, 'pending', NULL),
+(47, 2, 1, '2025-10-23 08:03:41', NULL, NULL, 0.00, 'pending', NULL),
+(48, 2, 1, '2025-10-23 09:46:42', NULL, NULL, 0.00, 'pending', NULL),
+(49, 2, 2, '2025-10-23 09:49:44', NULL, NULL, 15000.00, 'pending', NULL),
+(50, 3, 1, '2025-10-23 11:45:13', NULL, NULL, 15000.00, 'pending', NULL),
+(51, 3, 1, '2025-10-23 14:40:55', NULL, NULL, 15000.00, 'pending', NULL),
+(52, 3, 2, '2025-10-23 15:03:25', NULL, NULL, 15000.00, 'pending', NULL),
+(53, 4, 2, '2025-10-23 22:00:27', NULL, NULL, 0.00, 'pending', NULL),
+(54, 4, 2, '2025-10-23 22:02:51', NULL, NULL, 0.00, 'pending', NULL),
+(55, 2, 1, '2025-10-23 22:07:21', NULL, NULL, 5625.00, 'pending', NULL),
+(56, 2, 1, '2025-10-23 22:08:48', NULL, NULL, 15000.00, 'pending', NULL),
+(57, 2, 1, '2025-10-23 22:12:40', NULL, NULL, 15000.00, 'pending', NULL),
+(58, 2, 1, '2025-10-23 23:16:25', NULL, NULL, 0.00, 'pending', NULL),
+(59, 2, 2, '2025-10-23 23:16:48', NULL, NULL, 0.00, 'pending', NULL),
+(60, 2, 2, '2025-10-23 23:17:22', NULL, NULL, 0.00, 'pending', NULL),
+(61, 4, 1, '2025-10-24 00:20:29', NULL, NULL, 0.00, 'pending', NULL),
+(62, 2, 1, '2025-10-24 02:18:44', NULL, NULL, 0.00, 'pending', NULL),
+(63, 2, 1, '2025-10-24 10:33:25', NULL, NULL, 0.00, 'pending', NULL),
+(64, 2, 1, '2025-10-24 11:48:27', NULL, NULL, 0.00, 'pending', NULL),
+(65, 2, 1, '2025-10-24 11:52:05', NULL, NULL, 0.00, 'pending', NULL),
+(66, 5, 1, '2025-10-24 13:53:25', NULL, NULL, 0.00, 'pending', NULL),
+(67, 5, 1, '2025-10-24 13:57:39', NULL, NULL, 0.00, 'pending', NULL),
+(68, 2, 1, '2025-10-24 14:03:13', NULL, NULL, 0.00, 'pending', NULL),
+(69, 2, 1, '2025-10-24 14:54:27', NULL, NULL, 0.00, 'pending', NULL),
+(70, 2, 1, '2025-10-24 14:55:31', NULL, NULL, 0.00, 'pending', NULL),
+(71, 2, 1, '2025-10-24 14:57:39', NULL, NULL, 0.00, 'pending', NULL),
+(72, 2, 1, '2025-10-24 14:58:28', NULL, NULL, 0.00, 'pending', NULL),
+(73, 2, 1, '2025-10-24 15:01:29', NULL, NULL, 0.00, 'pending', NULL),
+(74, 2, 1, '2025-10-24 15:04:56', NULL, NULL, 0.00, 'pending', NULL),
+(75, 2, 1, '2025-10-24 15:45:36', NULL, NULL, 0.00, 'pending', NULL),
+(76, 2, 1, '2025-10-24 15:48:25', NULL, NULL, 0.00, 'pending', NULL),
+(77, 2, 1, '2025-10-24 16:03:44', NULL, NULL, 0.00, 'pending', NULL);
 
 -- --------------------------------------------------------
 
@@ -298,7 +322,7 @@ ALTER TABLE `wash_history`
 -- AUTO_INCREMENT for table `account`
 --
 ALTER TABLE `account`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `admin`
@@ -316,7 +340,7 @@ ALTER TABLE `revenue`
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `washer`
@@ -328,7 +352,7 @@ ALTER TABLE `washer`
 -- AUTO_INCREMENT for table `wash_history`
 --
 ALTER TABLE `wash_history`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
 
 --
 -- Constraints for dumped tables

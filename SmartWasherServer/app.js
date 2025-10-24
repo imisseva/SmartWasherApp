@@ -17,7 +17,7 @@ app.use(express.json());
 
 // ✅ Mount routes chuẩn
 app.use("/api", authRoutes);
-app.use("/api/history", historyRoutes);
+app.use("/api/wash-history", historyRoutes);  // Đổi URL để khớp với client
 app.use("/api/admin/users", userRoutes);
 app.use("/api/washers", washerRoutes); // ✅ chỉ giữ 1 route chính
 app.use("/api/washer", userWasherRoutes);

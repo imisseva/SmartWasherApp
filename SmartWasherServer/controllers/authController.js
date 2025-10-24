@@ -89,10 +89,23 @@ export async function register(req, res) {
       if (safe.password) safe.password = "<redacted>";
       console.error("Request body:", safe);
     } catch (e) {}
-    // If duplicate username, model may throw; send 409
-    const message = err?.message || "Lỗi server";
-    const status = /exists/i.test(message) ? 409 : 500;
-    return res.status(status).json({ success: false, message });
+    // Map common DB errors to friendly HTTP statuses
+    const rawMessage = err?.message || String(err);
+    let statusCode = 500;
+    let message = "Lỗi server";
+
+    // Duplicate username (MySQL ER_DUP_ENTRY)
+    if (err && (err.code === 'ER_DUP_ENTRY' || /duplicate entry/i.test(rawMessage) || /username'/.test(rawMessage.toLowerCase()))) {
+      statusCode = 409;
+      message = "Username đã tồn tại";
+    } else if (/exists/i.test(rawMessage)) {
+      statusCode = 409;
+      message = rawMessage;
+    } else if (rawMessage) {
+      message = rawMessage;
+    }
+
+    return res.status(statusCode).json({ success: false, message });
   }
 }
 export async function me(req, res) {

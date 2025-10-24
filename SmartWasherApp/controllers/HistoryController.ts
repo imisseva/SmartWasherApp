@@ -9,15 +9,15 @@ export const HistoryController = {
       if (!userData) throw new Error("Chưa đăng nhập");
       const user = JSON.parse(userData);
 
-      // Try the path-style endpoint first (/api/history/:userId)
+      // Gọi endpoint /api/wash-history/:userId
       let res;
       try {
-        res = await client.get(`/api/history/${user.id}`);
+        res = await client.get(`/api/wash-history/${user.id}`);
       } catch (err: any) {
-        // If server doesn't support path param, fallback to query param style (/api/history?user_id=)
+        // Fallback về query param nếu cần
         if (err.response && err.response.status === 404) {
-          console.warn("⚠️ Endpoint /api/history/:userId not found on server, trying fallback /api/history?user_id=...");
-          res = await client.get(`/api/history?user_id=${user.id}`);
+          console.warn("⚠️ Thử fallback sang query param...");
+          res = await client.get(`/api/wash-history?user_id=${user.id}`);
         } else {
           throw err;
         }
