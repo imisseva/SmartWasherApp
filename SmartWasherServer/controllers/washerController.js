@@ -289,7 +289,12 @@ export const updateWasherStatus = async (req, res) => {
         if (errorCodes.includes(statusStr)) {
           try {
             console.log(`🔁 Mã ${statusStr} được xác định là LỖI — thực hiện refund cho máy ${washer_id}`);
-              await HistoryController.refundWashForError(washer_id);
+            const result = await HistoryController.refundWashForError(washer_id);
+            if (result.success && result.userId) {
+              console.log(`✅ Đã hoàn lại lượt giặt cho user ${result.userId}`);
+              // Emit sự kiện để client tự cập nhật UI
+              res.emit('washerRefunded', { washerId: washer_id, userId: result.userId });
+            }
           } catch (e) {
             console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
           }

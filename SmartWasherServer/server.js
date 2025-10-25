@@ -131,11 +131,19 @@
 //   console.log("🚀 Server chạy tại http://192.168.1.81:5000");
 // });
 import app from "./app.js";
+import { createServer } from 'http';
+import { setupSocket } from './socket.js';
 
 const PORT = process.env.PORT || 5000;
 const HOST = "0.0.0.0"; // cho phép toàn mạng LAN truy cập
 
-app.listen(PORT, HOST, () => {
+const server = createServer(app);
+const io = setupSocket(server);
+
+// Lưu io vào app để các controller có thể sử dụng
+app.set('io', io);
+
+server.listen(PORT, HOST, () => {
   console.log(`✅ SmartWasher API đang chạy tại http://${HOST}:${PORT}`);
 });
 

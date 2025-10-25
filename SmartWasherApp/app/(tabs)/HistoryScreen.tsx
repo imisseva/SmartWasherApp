@@ -38,6 +38,7 @@ export default function HistoryScreen() {
         <Text
           style={[
             styles.status,
+            item.status === 'refunded' ? styles.refundedStatus :
             item.status.includes("Lỗi") ? styles.errorStatus :
             item.cost === 0 ? styles.freeStatus :
             styles.paidStatus
@@ -120,6 +121,9 @@ const styles = StyleSheet.create({
   },
   paidStatus: {
     color: "#4B8BF5",  // Màu xanh dương cho lượt giặt thường
+  },
+  refundedStatus: {
+    color: "#f39c12",  // Màu cam cho trạng thái hoàn tiền
   },
   date: {
     fontSize: 14,

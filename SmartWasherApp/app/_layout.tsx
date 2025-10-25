@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import '../utils/socket';  // Import socket để kết nối tự động
 
 export default function RootLayout() {
   return (

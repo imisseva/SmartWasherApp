@@ -48,19 +48,21 @@ export const HistoryController = {
     }
   },
   // Helper function: Trả lại lượt giặt và ghi nhận lỗi
-  async refundWashForError(washer_id) {
+  async refundWashForError(washer_id, user_id = null) {
     const conn = await db.getConnection();
     let refundedUserId = null;
     try {
       await conn.beginTransaction();
 
-      // 1. Tìm lịch sử giặt gần nhất của máy này
+      // 1. Tìm lịch sử giặt gần nhất của máy này và user này (nếu có user_id)
       const [history] = await conn.execute(
         `SELECT * FROM wash_history 
          WHERE washer_id = ? 
+         AND end_time IS NULL
+         ${user_id ? 'AND user_id = ?' : ''}
          ORDER BY requested_at DESC 
          LIMIT 1`,
-        [washer_id]
+        user_id ? [washer_id, user_id] : [washer_id]
       );
 
       if (history && history.length > 0) {
@@ -68,50 +70,44 @@ export const HistoryController = {
         
         // 2. Hoàn trả lượt giặt miễn phí (nếu đã dùng lượt miễn phí)
         if (lastWash.cost === 0) {
-          await conn.execute(
-            `UPDATE user 
-             SET free_washes_left = IFNULL(free_washes_left, 0) + 1,
-                 total_washes = GREATEST(IFNULL(total_washes, 0) - 1, 0)
-             WHERE id = ?`,
-            [lastWash.user_id]
+          // Kiểm tra xem lượt giặt này đã được refund chưa
+          const [refunded] = await conn.execute(
+            `SELECT status FROM wash_history WHERE id = ? AND status = 'refunded'`,
+            [lastWash.id]
           );
-          refundedUserId = lastWash.user_id;
-          console.log(`💰 Đã hoàn lại lượt giặt miễn phí cho user ${lastWash.user_id}`);
+
+          if (!refunded.length) {
+            await conn.execute(
+              `UPDATE user 
+               SET free_washes_left = IFNULL(free_washes_left, 0) + 1,
+                   total_washes = GREATEST(IFNULL(total_washes, 0) - 1, 0)
+               WHERE id = ?`,
+              [lastWash.user_id]
+            );
+            refundedUserId = lastWash.user_id;
+            console.log(`💰 Đã hoàn lại lượt giặt miễn phí cho user ${lastWash.user_id}`);
+          }
         }
 
-        // 3. Ghi lại thời điểm kết thúc (end_time) để đánh dấu giao dịch đã xử lý
+        // 3. Cập nhật trạng thái lượt giặt
         await conn.execute(
           `UPDATE wash_history 
-           SET end_time = NOW()
+           SET status = 'refunded',
+               notes = 'Máy giặt gặp lỗi - Đã hoàn lại lượt giặt',
+               end_time = NOW()
            WHERE id = ?`,
           [lastWash.id]
         );
-
-        // 4. Nếu bảng có cột status/notes thì ghi thêm thông tin refund để client có thể hiển thị rõ ràng
-        const [cols] = await conn.execute(
-          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wash_history' AND COLUMN_NAME IN ('status','notes')`
-        );
-        const hasStatus = cols.some(c => c.COLUMN_NAME === 'status');
-        const hasNotes = cols.some(c => c.COLUMN_NAME === 'notes');
-        if (hasStatus || hasNotes) {
-          const parts = [];
-          const params = [];
-          if (hasStatus) {
-            parts.push("status = ?");
-            params.push('error');
-          }
-          if (hasNotes) {
-            parts.push("notes = ?");
-            params.push('Máy giặt gặp lỗi - Đã hoàn lại lượt giặt');
-          }
-          parts.push("end_time = NOW()");
-          const updateSql = `UPDATE wash_history SET ${parts.join(', ')} WHERE id = ?`;
-          params.push(lastWash.id);
-          await conn.execute(updateSql, params);
-        }
       }
 
       await conn.commit();
+      
+      // Emit sự kiện qua socket nếu có refund
+      if (refundedUserId) {
+        const { emitRefundEvent } = await import('../socket.js');
+        const io = req.app.get('io');
+        emitRefundEvent(io, refundedUserId, washer_id);
+      }
       
       // Trả về thông tin về user được refund
       return {
@@ -144,6 +140,7 @@ export const HistoryController = {
           DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') AS date,
           h.cost,
           CASE 
+            WHEN h.status = 'refunded' THEN 'Hoàn tiền'
             WHEN h.status = 'error' THEN 'Lỗi'
             WHEN h.cost = 0 THEN 'Miễn phí'
             ELSE 'Hoàn thành'
