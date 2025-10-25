@@ -22,6 +22,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [machineCode, setMachineCode] = useState("");
+  const [isRefunding, setIsRefunding] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -34,6 +35,14 @@ export default function HomeScreen() {
             const response = await client.get(`/api/auth/me`);
             if (response.data?.success) {
               const updatedUser = response.data.user;
+              
+              // Kiểm tra xem số lượt free có tăng không
+              if (user && updatedUser.free_washes_left > user.free_washes_left) {
+                setIsRefunding(true);
+                // Tắt hiệu ứng sau 2 giây
+                setTimeout(() => setIsRefunding(false), 2000);
+              }
+              
               // Cập nhật vào AsyncStorage
               await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
               setUser(updatedUser);
@@ -67,7 +76,7 @@ export default function HomeScreen() {
       subUser.remove();
       clearInterval(refreshInterval);
     };
-  }, []);
+  }, [user]);
 
   // ===== Đăng xuất =====
   const handleLogout = async () => {
@@ -151,8 +160,14 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Xin chào 👋</Text>
             <Text style={styles.username}>{displayName}</Text>
             {typeof user?.free_washes_left === "number" && (
-              <View style={styles.freeBadge}>
-                <Text style={styles.freeText}>{user.free_washes_left} lượt miễn phí</Text>
+              <View style={[
+                styles.freeBadge,
+                isRefunding && styles.refundingBadge
+              ]}>
+                <Text style={[
+                  styles.freeText,
+                  isRefunding && styles.refundingText
+                ]}>{user.free_washes_left} lượt miễn phí</Text>
               </View>
             )}
           </View>
@@ -312,4 +327,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   freeText: { fontSize: 12, color: "#047857", fontWeight: "700" },
+  refundingBadge: {
+    backgroundColor: "#fff3e6", // Màu cam nhạt
+    borderColor: "#f39c12",     // Màu cam đậm
+    borderWidth: 1,
+  },
+  refundingText: {
+    color: "#f39c12",          // Màu cam đậm
+  },
 });
