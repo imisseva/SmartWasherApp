@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // export const API_BASE_URL = "http://192.168.88.139:5000"; // ⚠️ đúng địa chỉ IP máy chạy Node
-export const API_BASE_URL = "http://192.168.2.13:5000"; // ⚠️ đúng địa chỉ IP máy chạy Node
+export const API_BASE_URL = "http://192.168.2.8:5000"; // ⚠️ đúng địa chỉ IP máy chạy Node
 
 const client = axios.create({
   baseURL: API_BASE_URL,
