@@ -65,8 +65,27 @@ export default function HomeScreen() {
     fetchUser();
 
     // Lắng nghe sự kiện historyUpdated và userUpdated để cập nhật thông tin ngay lập tức
-    const subHistory = DeviceEventEmitter.addListener("historyUpdated", fetchUser);
-    const subUser = DeviceEventEmitter.addListener("userUpdated", fetchUser);
+    const subHistory = DeviceEventEmitter.addListener("historyUpdated", async (payload) => {
+      console.log('📣 historyUpdated event received:', payload);
+      // Nếu payload chứa history, có thể xử lý nhanh; luôn gọi fetchUser để đồng bộ
+      fetchUser();
+    });
+
+    // Xử lý userUpdated có thể được emit kèm payload từ socket hoặc chỉ như trigger từ WasherInfo
+    const subUser = DeviceEventEmitter.addListener("userUpdated", async (payload) => {
+      console.log('📣 userUpdated event received:', payload);
+      if (payload && payload.user) {
+        // Có payload user: cập nhật ngay từ payload
+        setUser(payload.user);
+        if (payload.isRefund) {
+          setIsRefunding(true);
+          setTimeout(() => setIsRefunding(false), 2000);
+        }
+      } else {
+        // Không có payload: chỉ trigger fetchUser để lấy dữ liệu mới nhất
+        await fetchUser();
+      }
+    });
 
     // Auto-refresh thông tin user mỗi 10 giây (để cập nhật sau refund nếu client không ở màn WasherInfo)
     const refreshInterval = setInterval(fetchUser, 10000);
@@ -142,6 +161,7 @@ export default function HomeScreen() {
   const displayName =
   (user?.name && user.name.trim()) ||  // ưu tiên họ tên
   user?.account?.username ||           // fallback username
+  user?.username ||                    // nếu server trả username ở root
   "Người dùng";
   return (
     <View style={styles.container}>

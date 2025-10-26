@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import client from "../constants/api";
+import { DeviceEventEmitter } from 'react-native';
 
 export type AppUser = {
   id: number;
@@ -34,6 +35,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       try {
         const raw = await AsyncStorage.getItem("user");
         if (raw) setUser(JSON.parse(raw));
+        // Notify socket (or other listeners) that we have restored the user session
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            DeviceEventEmitter.emit('userIdentified', { user: parsed });
+          } catch {
+            /* ignore parse errors */
+          }
+        }
       } finally {
         setLoading(false);
       }
@@ -48,6 +58,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         await AsyncStorage.setItem("user", JSON.stringify(user));
         if (token) await AsyncStorage.setItem("token", token);
         setUser(user);
+        // Let socket know the user id so it can join the correct room
+  try { DeviceEventEmitter.emit('userIdentified', { user }); } catch {}
         return { ok: true, user };
       }
       return { ok: false };

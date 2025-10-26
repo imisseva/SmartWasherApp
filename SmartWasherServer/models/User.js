@@ -144,6 +144,14 @@ export async function deleteAdminUser(id) {
     if (!urows.length) throw new Error("User not found");
     const accountId = urows[0].account_id;
 
+    // Delete dependent records that reference this user first to avoid FK constraint errors
+    // 1) wash_history entries
+    await conn.execute(`DELETE FROM wash_history WHERE user_id = ?`, [id]);
+
+    // 2) any admin row that references this account (rare, but safe)
+    await conn.execute(`DELETE FROM admin WHERE account_id = ?`, [accountId]);
+
+    // 3) delete user and account
     await conn.execute(`DELETE FROM user WHERE id=?`, [id]);
     await conn.execute(`DELETE FROM account WHERE id=?`, [accountId]);
 
