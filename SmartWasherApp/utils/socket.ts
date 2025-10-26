@@ -70,7 +70,7 @@ socket.on('washerRefunded', async ({ washerId, userId, user, history, message })
   }
 
   // Thông báo cho người dùng
-  Alert.alert('Hoàn tiền tự động', message);
+  // Alert.alert('❌ Máy giặt lỗi', 'Đã hoàn lại 1 lượt giặt miễn phí');
   
   // Báo các màn hình cập nhật
   DeviceEventEmitter.emit('historyUpdated', history);
