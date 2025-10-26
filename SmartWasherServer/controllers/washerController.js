@@ -15,9 +15,9 @@ import {
 // 🧠 Lệnh hiện tại cho ESP. ESP GET /api/washers/command sẽ nhận lệnh này.
 let currentCommand = null;
 
-
 import { Washer } from "../models/Washer.js";
 
+// Các function khác giữ nguyên...
 export const WasherController = {
   getAll: async (req, res) => {
     try {
@@ -286,21 +286,24 @@ export const updateWasherStatus = async (req, res) => {
         }
 
         // Nếu là mã lỗi, gọi refund logic để hoàn lại lượt giặt và ghi history.status
+     // Nếu là mã lỗi, gọi refund logic để hoàn lại lượt giặt và ghi history.status
         if (errorCodes.includes(statusStr)) {
           try {
             console.log(`🔁 Mã ${statusStr} được xác định là LỖI — thực hiện refund cho máy ${washer_id}`);
             const result = await HistoryController.refundWashForError(washer_id);
+
             if (result.success && result.userId) {
               console.log(`✅ Đã hoàn lại lượt giặt cho user ${result.userId}`);
-              // Emit sự kiện để client tự cập nhật UI
-              res.emit('washerRefunded', { washerId: washer_id, userId: result.userId });
+
+              // Sự kiện refund đã được emit trong HistoryController.refundWashForError
+              // (sử dụng emitRefundEvent) -- không emit thêm ở đây để tránh trùng lặp
             }
-          } catch (e) {
-            console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
+            } catch (e) {
+              console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
+            }
+          } else if (successCodes.includes(statusStr)) {
+            console.log(`ℹ️ Mã ${statusStr} được xác định là THÀNH CÔNG`);
           }
-        } else if (successCodes.includes(statusStr)) {
-          console.log(`ℹ️ Mã ${statusStr} được xác định là THÀNH CÔNG`);
-        }
       } else {
         // Không xác định được ID, vẫn trả về "0" để ESP dừng
         console.error(`❌ Không thể xác định ID máy giặt khi nhận mã hoàn tất:`, {
@@ -361,7 +364,10 @@ export const receiveResultFromESP = async (req, res) => {
     if (result !== 0) {
       try {
         console.log(`🔁 Máy ${washer_id} báo lỗi — thực hiện refund`);
-        await HistoryController.refundWashForError(washer_id);
+        const r = await HistoryController.refundWashForError(washer_id);
+        if (r.success && r.userId) {
+          console.log(`✅ Refund processed for user ${r.userId} (handled and emitted by HistoryController)`);
+        }
       } catch (e) {
         console.error(`❌ Refund thất bại cho máy ${washer_id}:`, e);
       }

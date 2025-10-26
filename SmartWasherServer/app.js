@@ -3,6 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import historyRoutes from "./routes/historyRoutes.js";
 import { HistoryController } from "./controllers/historyController.js";
+import { emitRefundEvent } from './socket.js';
 import userRoutes from "./routes/userRoutes.js";
 import washerRoutes from "./routes/washerRoutes.js";
 import { register } from "./controllers/authController.js";
@@ -30,6 +31,26 @@ app.use("/api/washers", washerInfoRoutes); // API mới để lấy thông tin m
 
 app.get("/", (req, res) => {
   res.send("✅ SmartWasher API đang chạy");
+});
+
+// Test endpoint: force emit washerRefunded (useful for debugging sockets)
+app.post('/api/test/emit-refund', async (req, res) => {
+  try {
+    const { userId, washerId } = req.body || {};
+    if (!userId || !washerId) return res.status(400).json({ success: false, message: 'Provide userId and washerId' });
+    // fetch user and last history
+    const db = (await import('./db.js')).default;
+    const [userRows] = await db.execute(`SELECT u.*, a.username, a.role FROM user u JOIN account a ON a.id = u.account_id WHERE u.id = ?`, [userId]);
+    const [historyRows] = await db.execute(`SELECT h.*, w.name as machineName FROM wash_history h JOIN washer w ON w.id = h.washer_id WHERE h.user_id = ? ORDER BY h.requested_at DESC LIMIT 1`, [userId]);
+    const user = userRows && userRows[0] ? userRows[0] : null;
+    const history = historyRows && historyRows[0] ? historyRows[0] : null;
+    // emit via helper
+    emitRefundEvent(userId, washerId, user, history);
+    return res.json({ success: true, user, history });
+  } catch (err) {
+    console.error('emit-refund test error', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // ===== Admin: trigger weekly reset (used by admin UI)

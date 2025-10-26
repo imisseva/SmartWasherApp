@@ -1,4 +1,5 @@
 import db from "../db.js";
+import { emitRefundEvent } from "../socket.js";
 
 export const HistoryController = {
   // Lấy lịch sử giặt cuối cùng của một máy giặt
@@ -47,10 +48,12 @@ export const HistoryController = {
       });
     }
   },
+  
   // Helper function: Trả lại lượt giặt và ghi nhận lỗi
   async refundWashForError(washer_id, user_id = null) {
     const conn = await db.getConnection();
     let refundedUserId = null;
+    console.log(`🔍 refundWashForError called for washer ${washer_id} user_id=${user_id}`);
     try {
       await conn.beginTransaction();
 
@@ -67,9 +70,14 @@ export const HistoryController = {
 
       if (history && history.length > 0) {
         const lastWash = history[0];
+        console.log('ℹ️ Found lastWash for refund:', { id: lastWash.id, user_id: lastWash.user_id, cost: lastWash.cost, end_time: lastWash.end_time });
         
-        // 2. Hoàn trả lượt giặt miễn phí (nếu đã dùng lượt miễn phí)
-        if (lastWash.cost === 0) {
+  // 2. Hoàn trả lượt giặt miễn phí (nếu đã dùng lượt miễn phí)
+  // Note: MySQL DECIMAL values are often returned as strings (e.g. '0.00'),
+  // so coerce to number before comparing.
+  const parsedCost = typeof lastWash.cost === 'number' ? lastWash.cost : parseFloat(lastWash.cost);
+  console.log('ℹ️ lastWash parsedCost:', parsedCost, 'raw:', lastWash.cost);
+  if (parsedCost === 0) {
           // Kiểm tra xem lượt giặt này đã được refund chưa
           const [refunded] = await conn.execute(
             `SELECT status FROM wash_history WHERE id = ? AND status = 'refunded'`,
@@ -98,21 +106,66 @@ export const HistoryController = {
            WHERE id = ?`,
           [lastWash.id]
         );
+      } else {
+        console.log('ℹ️ Không tìm thấy lịch sử phù hợp để refund cho máy', washer_id);
       }
 
       await conn.commit();
       
-      // Emit sự kiện qua socket nếu có refund
+      // Lấy thông tin user mới nhất sau khi refund
+      let updatedUser = null;
+      let updatedHistory = null;
+      
       if (refundedUserId) {
-        const { emitRefundEvent } = await import('../socket.js');
-        const io = req.app.get('io');
-        emitRefundEvent(io, refundedUserId, washer_id);
+        // Lấy thông tin user mới
+        const [userRows] = await conn.execute(
+          `SELECT u.*, a.username, a.role 
+           FROM user u 
+           JOIN account a ON a.id = u.account_id 
+           WHERE u.id = ?`,
+          [refundedUserId]
+        );
+        
+        if (userRows.length > 0) {
+          updatedUser = userRows[0];
+        }
+        
+        // Lấy lịch sử mới nhất
+        const [historyRows] = await conn.execute(
+          `SELECT h.*, w.name as machineName,
+           CASE 
+             WHEN h.status = 'refunded' THEN 'Hoàn tiền'
+             WHEN h.status = 'error' THEN 'Lỗi'
+             WHEN h.cost = 0 THEN 'Miễn phí'
+             ELSE 'Hoàn thành'
+           END as displayStatus
+           FROM wash_history h
+           JOIN washer w ON w.id = h.washer_id
+           WHERE h.user_id = ?
+           ORDER BY h.requested_at DESC
+           LIMIT 1`,
+          [refundedUserId]
+        );
+        
+        if (historyRows.length > 0) {
+          updatedHistory = historyRows[0];
+        }
+
+        // Emit sự kiện với đầy đủ thông tin via socket helper
+        try {
+          console.log('ℹ️ Chuẩn bị emitRefundEvent...', { refundedUserId, washer_id });
+          emitRefundEvent(refundedUserId, washer_id, updatedUser, updatedHistory);
+        } catch (e) {
+          console.warn('Không thể emit sự kiện refund qua socket:', e);
+        }
       }
       
-      // Trả về thông tin về user được refund
+      // Trả về thông tin đầy đủ
       return {
         success: true,
         userId: refundedUserId,
+        user: updatedUser,
+        history: updatedHistory,
         message: `Đã hoàn lại lượt giặt cho user ${refundedUserId}`
       };
     } catch (err) {
