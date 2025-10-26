@@ -96,17 +96,7 @@ export default function WasherInfo() {
           // Prefer explicit status/notes if DB migration was applied
           const explicitError = history && (history.status === 'error' || (history.notes && /hoàn|hoan|hoàn lại|hoan lai/i.test(history.notes)));
 
-          // If history explicitly marked as refunded, skip local Alert because
-          // the server/socket will already notify the user to avoid duplicate popups.
-          const historyIsRefunded = history && (
-            history.status === 'refunded' ||
-            ((history as any).displayStatus === 'Hoàn tiền') ||
-            (history.notes && /hoàn|hoan|hoàn lại|hoan lai/i.test(history.notes))
-          );
-
-          if (historyIsRefunded) {
-            console.log('ℹ️ WasherInfo: history indicates refunded, skipping local Alert');
-          } else if (explicitError || (history && history.cost === 0 && history.end_time)) {
+          if (explicitError || (history && history.cost === 0 && history.end_time)) {
             // Trường hợp: explicit ghi nhận lỗi/hoàn tiền, hoặc heuristic cost===0 + end_time
             const note = history?.notes ? `\nGhi chú: ${history.notes}` : "\nLượt giặt miễn phí đã được hoàn lại vào tài khoản của bạn.";
             Alert.alert(
@@ -138,16 +128,7 @@ export default function WasherInfo() {
           const history = await WasherController.getLastWashHistory(washer.id);
 
           // If DB includes notes/status, show them; otherwise fallback to cost heuristic
-          // If history already marked as refunded, skip local alert (socket will notify)
-          const historyIsRefundedErr = history && (
-            history.status === 'refunded' ||
-            ((history as any).displayStatus === 'Hoàn tiền') ||
-            (history.notes && /hoàn|hoan|hoàn lại|hoan lai/i.test(history.notes))
-          );
-
-          if (historyIsRefundedErr) {
-            console.log('ℹ️ WasherInfo: history indicates refunded (error branch), skipping local Alert');
-          } else if (history && (history.status === 'error' || history.notes)) {
+          if (history && (history.status === 'error' || history.notes)) {
             const message = history.notes
               ? `${history.notes}`
               : "Máy giặt gặp lỗi. Lượt giặt miễn phí đã được hoàn lại vào tài khoản của bạn.";
