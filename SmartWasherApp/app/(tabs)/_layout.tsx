@@ -1,7 +1,19 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
+import { useAuth } from "../../hooks/auth";
 
 export default function TabsLayout() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    // Nếu đã load và không có user thì trả về màn Login
+    if (!loading && !user) {
+      router.replace("/Login");
+    }
+  }, [loading, user, router]);
+
   return (
     <Tabs
       screenOptions={{

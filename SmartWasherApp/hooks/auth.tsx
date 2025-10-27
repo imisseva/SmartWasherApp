@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import client from "../constants/api";
+import { AuthController } from "../controllers/AuthController";
 import { DeviceEventEmitter } from 'react-native';
 
 export type AppUser = {
@@ -52,18 +52,23 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const signIn = async (username: string, password: string) => {
     try {
-      const res = await client.post("/api/login", { username, password });
-      if (res.data?.success) {
-        const { user, token } = res.data;
-        await AsyncStorage.setItem("user", JSON.stringify(user));
-        if (token) await AsyncStorage.setItem("token", token);
-        setUser(user);
-        // Let socket know the user id so it can join the correct room
-  try { DeviceEventEmitter.emit('userIdentified', { user }); } catch {}
-        return { ok: true, user };
-      }
-      return { ok: false };
-    } catch {
+      // Reuse client-side controller to normalize user shape and persist token
+      const user = await AuthController.login(username, password);
+      // Chuẩn hoá thành shape dùng trong app: có top-level username và role
+      const normalized = {
+        ...user,
+        username: user?.account?.username ?? (user as any)?.username ?? "",
+        role: (user?.account?.role ?? (user as any)?.role ?? "user") as "user" | "admin",
+      } as AppUser & { account?: any };
+
+      // Ghi đè AsyncStorage với object đã chuẩn hoá để các phần khác dùng chung shape
+  try { await AsyncStorage.setItem("user", JSON.stringify(normalized)); } catch { /* ignore */ }
+
+      setUser(normalized as any);
+      try { DeviceEventEmitter.emit('userIdentified', { user: normalized }); } catch {}
+      return { ok: true, user: normalized };
+    } catch (err) {
+      console.error("signIn error:", err);
       return { ok: false };
     }
   };

@@ -18,10 +18,17 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    // Nếu chưa có user thì chuyển về Login
+    if (!user) {
+      router.replace("/Login");
+      return;
+    }
+
+    // Nếu đã login nhưng không phải admin thì chuyển về Home
     if (user && user.role !== "admin") {
       router.replace("/(tabs)/HomeScreen");
     }
-  }, [user]);
+  }, [user, router]);
 
   const goUsers = () => router.push("/admin/users" as Href);
   const goWashers = () => router.push("/admin/washers" as Href);
