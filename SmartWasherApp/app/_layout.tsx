@@ -8,6 +8,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" />
         <Stack.Screen name="(tabs)" />
+        {/* Explicit admin route so navigation.replace('/admin') resolves reliably */}
+        <Stack.Screen name="admin" />
       </Stack>
     </AuthProvider>
   );

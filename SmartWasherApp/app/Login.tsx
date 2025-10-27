@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { AuthController } from "../controllers/AuthController";
+import { useAuth } from "../hooks/auth";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -20,6 +20,7 @@ export default function LoginScreen() {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+  const { signIn } = useAuth();
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -29,9 +30,14 @@ export default function LoginScreen() {
 
     try {
       setBusy(true);
-      const user = await AuthController.login(username, password);
-      const role = (user as any)?.account?.role?.toLowerCase?.();
-    
+      const res = await signIn(username, password);
+      if (!res.ok) {
+        Alert.alert("🚫 Lỗi", "Tên đăng nhập hoặc mật khẩu không đúng.");
+        return;
+      }
+      const user = res.user as any;
+      const role = (user?.role || "user").toString().toLowerCase();
+
       if (role === "admin") {
         router.replace("/admin" as Href);
       } else {
