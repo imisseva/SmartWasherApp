@@ -68,3 +68,26 @@ export const emitRefundEvent = (userId, washerId, user, history) => {
     console.error('❌ Lỗi khi gửi sự kiện washerRefunded:', err);
   }
 };
+
+export const emitWashCreated = (userId, washerId, user, history) => {
+  if (!_io) return;
+  try {
+    const payload = {
+      userId,
+      washerId,
+      user,
+      history,
+      message: '✅ Có lượt giặt mới'
+    };
+    if (userId) {
+      const room = `user_${userId}`;
+      _io.to(room).emit('washCreated', payload);
+      console.log(`✅ Đã emit washCreated to room ${room}`);
+    } else {
+      _io.emit('washCreated', payload);
+      console.log('✅ Đã emit washCreated (broadcast)');
+    }
+  } catch (err) {
+    console.error('❌ Lỗi khi gửi sự kiện washCreated:', err);
+  }
+};
