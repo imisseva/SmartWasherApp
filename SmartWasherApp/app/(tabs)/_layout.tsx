@@ -35,6 +35,16 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* ✅ Tab thống kê mới */}
+      <Tabs.Screen
+        name="StatisticalScreen"
+        options={{
+          title: "Thống kê",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bar-chart-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

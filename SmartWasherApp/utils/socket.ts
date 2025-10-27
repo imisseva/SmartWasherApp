@@ -76,6 +76,23 @@ socket.on('washerRefunded', async ({ washerId, userId, user, history, message })
   DeviceEventEmitter.emit('historyUpdated', history);
 });
 
+// Khi server thông báo có lượt giặt mới (created)
+socket.on('washCreated', async ({ washerId, userId, user, history, message }) => {
+  console.log('📢 Nhận sự kiện washCreated:', { washerId, userId, message });
+
+  if (user) {
+    try {
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      console.log('💾 Đã lưu user mới từ washCreated vào AsyncStorage:', { id: user.id, total_washes: user.total_washes });
+      DeviceEventEmitter.emit('userUpdated', { user, isWashCreated: true });
+    } catch (e) {
+      console.warn('Lỗi khi lưu user data từ washCreated:', e);
+    }
+  }
+
+  DeviceEventEmitter.emit('historyUpdated', history);
+});
+
 
 
 export default socket;

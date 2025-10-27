@@ -1,5 +1,5 @@
 import db from "../db.js";
-import { emitRefundEvent } from "../socket.js";
+import { emitRefundEvent, emitWashCreated } from "../socket.js";
 
 export const HistoryController = {
   // Lấy lịch sử giặt cuối cùng của một máy giặt
@@ -251,6 +251,26 @@ export const HistoryController = {
         await conn.commit();
 
         const updatedUser = rows[0];
+
+        // Try to fetch the latest history entry we just created to include in socket payload
+        let latestHistory = null;
+        try {
+          const [hrows] = await conn.execute(
+            `SELECT h.*, w.name as machineName FROM wash_history h JOIN washer w ON w.id = h.washer_id WHERE h.user_id = ? ORDER BY h.requested_at DESC LIMIT 1`,
+            [user_id]
+          );
+          if (hrows && hrows.length) latestHistory = hrows[0];
+        } catch (e) {
+          console.warn('Không thể lấy latestHistory để emit washCreated:', e.message || e);
+        }
+
+        // Emit socket event so client(s) can update immediately
+        try {
+          emitWashCreated(user_id, washer_id, updatedUser, latestHistory);
+        } catch (e) {
+          console.warn('Không thể emit washCreated:', e);
+        }
+
         return res.json({ success: true, id: insRes.insertId, user: updatedUser });
       } catch (e) {
         await conn.rollback();
