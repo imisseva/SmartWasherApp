@@ -7,7 +7,7 @@ import client from '../../constants/api';
 import { ThemedText } from '../../components/themed-text';
 import { PieChart } from 'react-native-chart-kit';
 
-const WASH_THRESHOLD = 7; // Ngưỡng cảnh báo số lần giặt trong tuần
+const WASH_THRESHOLD = 4; // Ngưỡng cảnh báo số lần giặt trong tuần
 
 // Dữ liệu mẫu để hiển thị ngay
 const sampleData = {
@@ -82,7 +82,7 @@ const StatisticalScreen = () => {
         if (total > WASH_THRESHOLD) {
           Alert.alert(
             '🚨 Cảnh báo sử dụng',
-            'Tuần này bạn đã giặt hơn 7 lần. Hãy cân nhắc giảm lượt sử dụng vào tuần sau nhé!',
+            'Tuần này bạn đã giặt hơn 4 lần. Hãy cân nhắc giảm lượt sử dụng vào tuần sau nhé!',
             [{ text: 'Đã hiểu', style: 'default' }],
             { cancelable: true }
           );
