@@ -6,9 +6,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   DeviceEventEmitter,
+  StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context"; // ✅ Import SafeAreaView
+import { Ionicons } from "@expo/vector-icons"; // ✅ Thêm Ionicons
 import { HistoryController } from "../../controllers/HistoryController";
-import { WashHistory } from "../../models/WashHistory";
+import { WashHistory } from "../../models/WashHistory"; // Giả định import này tồn tại
 
 export default function HistoryScreen() {
   const [history, setHistory] = useState<WashHistory[]>([]);
@@ -31,108 +34,178 @@ export default function HistoryScreen() {
   }, []);
   
 
-  const renderItem = ({ item }: { item: WashHistory }) => (
-    <View style={styles.card}>
-      <View style={styles.rowBetween}>
-        <Text style={styles.machine}>{item.machineName}</Text>
-        <Text
-          style={[
-            styles.status,
-            item.status === 'refunded' ? styles.refundedStatus :
-            item.status.includes("Lỗi") ? styles.errorStatus :
-            item.cost === 0 ? styles.freeStatus :
-            styles.paidStatus
-          ]}
-        >
-          {item.status}
-        </Text>
+  const renderItem = ({ item }: { item: WashHistory }) => {
+    const isRefunded = item.status === 'refunded';
+    const isError = item.status.includes("Lỗi");
+    const isFree = item.cost === 0 && !isRefunded && !isError;
+      
+    // Định nghĩa màu sắc và icon theo trạng thái (đồng bộ với bản cập nhật trước)
+    let statusStyle = styles.paidStatus;
+    let iconName: keyof typeof Ionicons.glyphMap = "checkmark-circle-outline";
+    let statusText = item.status;
+      
+    if (isRefunded) {
+        statusStyle = styles.refundedStatus;
+        iconName = "return-down-back-outline";
+        statusText = "Đã hoàn tiền";
+    } else if (isError) {
+        statusStyle = styles.errorStatus;
+        iconName = "alert-circle-outline";
+        statusText = "Lỗi/Thất bại";
+    } else if (isFree) {
+        statusStyle = styles.freeStatus;
+        iconName = "gift-outline";
+        statusText = "Miễn phí";
+    } else {
+        statusStyle = styles.paidStatus;
+        iconName = "checkmark-circle-outline";
+        statusText = "Hoàn thành";
+    }
+
+    return (
+      <View style={[styles.card, { borderLeftColor: statusStyle.color }]}>
+        <View style={styles.rowBetween}>
+          <View style={styles.machineInfo}>
+            <Text style={styles.machine}>{item.machineName}</Text>
+          </View>
+          <View style={styles.statusBox}>
+              <Ionicons name={iconName} size={18} color={statusStyle.color} />
+              <Text style={[styles.statusText, statusStyle]}>
+                  {statusText}
+              </Text>
+          </View>
+        </View>
+        
+        {/* Hàng thứ hai: Thời gian */}
+        <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color="#777" />
+            <Text style={styles.date}>{item.date}</Text>
+        </View>
+        
+        {/* Hàng thứ ba: Chi phí */}
+        <View style={styles.detailRow}>
+            <Ionicons name="wallet-outline" size={16} color="#777" />
+            <Text style={styles.details}>
+                {item.cost === 0 ? "Miễn phí" : `${item.cost.toLocaleString()}đ`}
+            </Text>
+        </View>
       </View>
-      <Text style={styles.date}>🕒 {item.date}</Text>
-      <Text style={styles.details}>💰 {item.cost.toLocaleString()}đ</Text>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color="#4B8BF5" />
-        <Text style={{ textAlign: "center", marginTop: 10 }}>
-          Đang tải lịch sử...
-        </Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, { justifyContent: "center", alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color="#4B8BF5" />
+          <Text style={{ textAlign: "center", marginTop: 10 }}>
+            Đang tải lịch sử...
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>📜 Lịch sử giặt</Text>
-      {history.length > 0 ? (
-        <FlatList
-          data={history}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 100 }}
-        />
-      ) : (
-        <Text style={styles.emptyText}>Chưa có lịch sử giặt nào</Text>
-      )}
-    </View>
+    // ✅ Sử dụng SafeAreaView để tránh Safe Zone
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f0f4f8" />
+      <View style={styles.container}>
+        <Text style={styles.title}>📜 Lịch sử giặt</Text>
+        {history.length > 0 ? (
+          <FlatList
+            data={history}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 4 }}
+          />
+        ) : (
+          <Text style={styles.emptyText}>Chưa có lịch sử giặt nào</Text>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fb", padding: 16 },
+  // ✅ Đảm bảo Safe Area: Nền chung cho toàn bộ màn hình
+  safeArea: { flex: 1, backgroundColor: "#f0f4f8" }, 
+  container: { flex: 1, paddingHorizontal: 16 },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginVertical: 16,
+    fontSize: 24, 
+    fontWeight: "800", 
+    marginVertical: 20, 
     textAlign: "center",
-    color: "#333",
+    color: "#2c3e50", 
   },
   card: {
     backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 14,
-    shadowColor: "#ccc",
-    shadowOpacity: 0.3,
+    padding: 18, 
+    borderRadius: 16, 
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.08, 
     shadowRadius: 5,
     elevation: 3,
+    borderLeftWidth: 6, // Đường viền màu trạng thái nổi bật
+    borderLeftColor: '#ccc',
   },
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    alignItems: 'center', 
+    marginBottom: 10, 
+  },
+  machineInfo: {
+      flex: 1,
+      marginRight: 10, 
   },
   machine: {
+    fontWeight: "900", 
+    color: "#333",
+    fontSize: 17, 
+  },
+  statusBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6, 
+      paddingHorizontal: 10, 
+      paddingVertical: 5,
+      borderRadius: 10, 
+      backgroundColor: '#f8f9fa', 
+  },
+  statusText: {
     fontWeight: "700",
-    color: "#3AB0A2",
-    fontSize: 16,
+    fontSize: 15, 
   },
-  status: {
-    fontWeight: "600",
-    fontSize: 14,
-  },
+  // --- STYLES TRẠNG THÁI MỚI ---
   errorStatus: {
-    color: "#e74c3c",  // Màu đỏ cho trạng thái lỗi
+    color: "#dc3545", // Đỏ cảnh báo
   },
   freeStatus: {
-    color: "#2ecc71",  // Màu xanh lá cho lượt giặt miễn phí
+    color: "#ffc107", // Cam cho miễn phí
   },
   paidStatus: {
-    color: "#4B8BF5",  // Màu xanh dương cho lượt giặt thường
+    color: "#28a745", // Xanh lá cho hoàn thành
   },
   refundedStatus: {
-    color: "#f39c12",  // Màu cam cho trạng thái hoàn tiền
+    color: "#6c757d", // Xám cho hoàn tiền
+  },
+  // --------------------------
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10, 
+    marginBottom: 6,
   },
   date: {
-    fontSize: 14,
+    fontSize: 15, 
     color: "#555",
-    marginBottom: 4,
   },
   details: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 15,
+    color: "#333", 
+    fontWeight: '600',
   },
   emptyText: {
     textAlign: "center",
