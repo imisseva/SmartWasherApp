@@ -1,15 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Alert, StyleSheet, ActivityIndicator, DeviceEventEmitter, Dimensions } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react'; // ✅ Import useRef
+import { View, Alert, StyleSheet, ActivityIndicator, DeviceEventEmitter, Dimensions, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/auth';
 import client from '../../constants/api';
-// ThemedView not used here because SafeAreaView enforces background/safe area
-import { ThemedText } from '../../components/themed-text';
 import { PieChart } from 'react-native-chart-kit';
+import { Ionicons } from '@expo/vector-icons';
 
-const WASH_THRESHOLD = 4; // Ngưỡng cảnh báo số lần giặt trong tuần
+const WASH_THRESHOLD = 4;
 
-// Dữ liệu mẫu để hiển thị ngay
 const sampleData = {
   total: 8,
   success: 7,
@@ -22,29 +20,30 @@ const sampleData = {
 
 const StatisticalScreen = () => {
   const { user } = useAuth();
-    console.log('Current user:', user);
   const [error, setError] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [totalWashes, setTotalWashes] = useState(sampleData.total);
   const [weekInfo, setWeekInfo] = useState<{ start?: string; end?: string }>(sampleData.weekInfo || {});
   const [successCount, setSuccessCount] = useState<number>(sampleData.success || 0);
   const [failedCount, setFailedCount] = useState<number>(sampleData.failed || 0);
+  
+  // ✅ DÙNG REF: Lưu trữ trạng thái cảnh báo để tránh loop render
+  const hasAlertedRef = useRef(false);
 
+  // ✅ CHỈNH SỬA LOGIC CẢNH BÁO: Loại bỏ hasAlerted khỏi dependencies
   const fetchWeeklyData = useCallback(async () => {
     if (!user?.id) return;
     setDataLoading(true);
     setError(null);
     
     try {
-      // The server exposes GET /api/wash-history/:userId which returns user's history rows
       const res = await client.get(`/api/wash-history/${user.id}`);
       const { success, data, message } = res.data;
 
       if (success && Array.isArray(data)) {
-        // Compute counts for current week (Mon-Sun)
         const now = new Date();
-        const day = now.getDay(); // 0 (Sun) - 6 (Sat)
-        const diffToMonday = (day + 6) % 7; // days since Monday
+        const day = now.getDay();
+        const diffToMonday = (day + 6) % 7;
         const monday = new Date(now);
         monday.setHours(0,0,0,0);
         monday.setDate(now.getDate() - diffToMonday);
@@ -57,15 +56,13 @@ const StatisticalScreen = () => {
         let failed = 0;
 
         for (const row of data) {
-          // row.date is like 'YYYY-MM-DD HH:mm'
-          const raw = row.date || row.requested_at || row.requested_at;
+          const raw = row.date || row.requested_at;
           const dateStr = typeof raw === 'string' ? raw.replace(' ', 'T') : null;
           const d = dateStr ? new Date(dateStr) : null;
           if (!d) continue;
           if (d >= monday && d <= sunday) {
             total += 1;
             const status = (row.status || '').toString();
-            // The server returns localized displayStatus like 'Miễn phí','Hoàn thành','Lỗi','Hoàn tiền'
             if (status === 'Miễn phí' || status === 'Hoàn thành') success += 1; else failed += 1;
           }
         }
@@ -74,18 +71,19 @@ const StatisticalScreen = () => {
         setSuccessCount(success);
         setFailedCount(failed);
 
-        // Derive weekInfo strings
         const format = (dt: Date) => `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
         setWeekInfo({ start: format(monday), end: format(sunday) });
 
-        // Hiển thị cảnh báo nếu vượt ngưỡng
-        if (total > WASH_THRESHOLD) {
+        // ✅ LOGIC CẢNH BÁO VỚI REF
+        if (total > WASH_THRESHOLD && hasAlertedRef.current === false) {
           Alert.alert(
             '🚨 Cảnh báo sử dụng',
             'Tuần này bạn đã giặt hơn 4 lần. Hãy cân nhắc giảm lượt sử dụng vào tuần sau nhé!',
             [{ text: 'Đã hiểu', style: 'default' }],
             { cancelable: true }
           );
+          // Set giá trị ref = true
+          hasAlertedRef.current = true; 
         }
       } else {
         setError(message || 'Không thể tải dữ liệu');
@@ -96,31 +94,25 @@ const StatisticalScreen = () => {
     } finally {
       setDataLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id]); // hasAlertedRef không cần trong dependency array
 
-  // Tải dữ liệu khi có user
+  // ✅ CHỈNH SỬA useEffect: Reset ref khi user thay đổi
   useEffect(() => {
-      console.log('useEffect user?.id:', user?.id);
+    // RESET REF: Khi user ID thay đổi (đăng nhập mới), reset ref
+    hasAlertedRef.current = false;
+    
     if (user?.id) {
       fetchWeeklyData();
-      // Tự động cập nhật mỗi 5 phút
-      const interval = setInterval(fetchWeeklyData, 5 * 60 * 1000);
+      const interval = setInterval(() => fetchWeeklyData(), 5 * 60 * 1000); 
       return () => clearInterval(interval);
     }
-  }, [user?.id, fetchWeeklyData]);
+    // Chỉ cần fetchWeeklyData và user?.id trong dependency array
+  }, [user?.id, fetchWeeklyData]); 
 
-  // Lắng nghe event từ socket (qua DeviceEventEmitter) để cập nhật ngay khi có sự kiện lịch sử/user mới
+  // Giữ nguyên logic DeviceEventEmitter
   useEffect(() => {
-    const onUserUpdated = (payload: any) => {
-      console.log('DeviceEventEmitter userUpdated payload:', payload);
-      // Khi user được cập nhật (ví dụ sau khi tạo wash), fetch lại số liệu
-      fetchWeeklyData();
-    };
-
-    const onHistoryUpdated = (payload: any) => {
-      console.log('DeviceEventEmitter historyUpdated payload:', payload);
-      fetchWeeklyData();
-    };
+    const onUserUpdated = () => fetchWeeklyData();
+    const onHistoryUpdated = () => fetchWeeklyData();
 
     const sub1 = DeviceEventEmitter.addListener('userUpdated', onUserUpdated);
     const sub2 = DeviceEventEmitter.addListener('historyUpdated', onHistoryUpdated);
@@ -131,100 +123,129 @@ const StatisticalScreen = () => {
     };
   }, [fetchWeeklyData]);
 
-  // Loading state đã được bỏ để hiện dữ liệu mẫu ngay
-
   if (!user) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top","bottom"]}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.containerInner}>
-          <ThemedText style={styles.message}>
+          <Text style={styles.message}>
             Vui lòng đăng nhập để xem thống kê
-          </ThemedText>
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const chartConfig = {
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    color: (opacity = 1) => `rgba(0,0,0, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(68,68,68, ${opacity})`,
+  };
+
+  const pieData = [
+    { name: 'Giặt OK', population: successCount || 0, color: '#4CAF50', legendFontColor: '#444', legendFontSize: 14 },
+    { name: 'Giặt lỗi', population: failedCount || 0, color: '#F44336', legendFontColor: '#444', legendFontSize: 14 },
+  ];
+  
+  const screenWidth = Dimensions.get('window').width;
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top","bottom"]}>
-      <View style={styles.containerInner}>
-      <ThemedText style={styles.title}>
-        Thống kê lượt giặt trong tuần
-        {(weekInfo?.start && weekInfo?.end) && (
-          <ThemedText style={styles.subtitle}>
-            {'\n'}({weekInfo?.start} - {weekInfo?.end})
-          </ThemedText>
-        )}
-      </ThemedText>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <View style={styles.containerInner}>
+          
+          <Text style={styles.title}>
+            <Ionicons name="bar-chart-outline" size={26} color="#2c3e50" /> Thống kê lượt giặt
+          </Text>
+          {(weekInfo?.start && weekInfo?.end) && (
+            <Text style={styles.subtitlePeriod}>
+              ({weekInfo?.start} - {weekInfo?.end})
+            </Text>
+          )}
 
-      <View style={[styles.statsContainer, dataLoading && styles.loading]}>
-        {error ? (
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        ) : (
-          <>
-            {dataLoading && <ActivityIndicator style={styles.loader} color="#0066cc" />}
-            <ThemedText style={styles.summary}>
-              Số lượt giặt của bạn trong tuần này:{' '}
-              <ThemedText style={[
-                styles.highlightText,
-                totalWashes > WASH_THRESHOLD && styles.warningText
-              ]}>
-                {totalWashes} lượt
-              </ThemedText>
-            </ThemedText>
-            
-            {totalWashes > WASH_THRESHOLD && (
-              <ThemedText style={styles.warning}>
-                🚨 Tuần này bạn đã giặt hơn {WASH_THRESHOLD} lần.{'\n'}
-                Hãy cân nhắc giảm lượt sử dụng vào tuần sau nhé!
-              </ThemedText>
+          <View style={[styles.statsContainer, dataLoading && styles.loading]}>
+            {dataLoading && <ActivityIndicator style={styles.loader} size="small" color="#0066cc" />}
+            {error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : (
+              <>
+                <Text style={styles.summaryLabel}>
+                  Tổng số lượt giặt trong tuần này:
+                </Text>
+                
+                <View style={[
+                    styles.totalHighlightContainer,
+                    totalWashes > WASH_THRESHOLD && {borderColor: styles.warningText.color}
+                ]}>
+                    <Text style={[
+                      styles.totalCount,
+                      totalWashes > WASH_THRESHOLD && styles.warningText
+                    ]}>
+                        {totalWashes}
+                    </Text>
+                    <Text style={[
+                        styles.totalUnit,
+                        totalWashes > WASH_THRESHOLD && styles.warningText
+                    ]}>
+                        lượt
+                    </Text>
+                </View>
+                
+                {totalWashes > WASH_THRESHOLD && (
+                  <Text style={styles.warning}>
+                    🚨 Cảnh báo: Bạn đã vượt ngưỡng {WASH_THRESHOLD} lần.
+                    Hãy cân nhắc sử dụng hiệu quả hơn!
+                  </Text>
+                )}
+                
+                <View style={styles.detailRow}>
+                    <View style={styles.detailBox}>
+                        <Text style={styles.detailCountSuccess}>{successCount}</Text>
+                        <Text style={styles.detailLabel}>Lượt OK</Text>
+                    </View>
+                    <View style={styles.detailBox}>
+                        <Text style={styles.detailCountFailed}>{failedCount}</Text>
+                        <Text style={styles.detailLabel}>Lượt lỗi/hoàn</Text>
+                    </View>
+                </View>
+              </>
             )}
-          </>
-        )}
-      </View>
+          </View>
 
-      <ThemedText style={styles.note}>* Số liệu được cập nhật mỗi 5 phút</ThemedText>
+          <Text style={styles.note}>* Số liệu được cập nhật tự động mỗi 5 phút</Text>
 
-      {/* Pie chart */}
-      <View style={styles.pieContainer}>
-        <PieChart
-          data={[
-            { name: 'Giặt OK', population: successCount || 0, color: '#4CAF50', legendFontColor: '#444', legendFontSize: 14 },
-            { name: 'Giặt lỗi', population: failedCount || 0, color: '#F44336', legendFontColor: '#444', legendFontSize: 14 },
-          ]}
-          width={Dimensions.get('window').width - 32}
-          height={180}
-          chartConfig={{
-            backgroundGradientFrom: '#ffffff',
-            backgroundGradientTo: '#ffffff',
-            color: (opacity = 1) => `rgba(0,0,0, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(68,68,68, ${opacity})`,
-          }}
-          accessor="population"
-          backgroundColor="transparent"
-          paddingLeft="15"
-          absolute
-        />
-      </View>
-
-      </View>
+          {/* Pie chart */}
+          <View style={styles.pieContainer}>
+            <Text style={styles.chartTitle}>Tỷ lệ thành công/thất bại</Text>
+            <PieChart
+              data={pieData}
+              width={screenWidth - 32}
+              height={220}
+              chartConfig={chartConfig}
+              accessor="population"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              absolute
+            />
+          </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 0,
-  },
   safeArea: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f0f4f8', 
+  },
+  scrollViewContent: { 
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   containerInner: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#ffffff',
   },
   message: {
     textAlign: 'center',
@@ -232,34 +253,27 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#000',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
   errorText: {
-    color: '#ff6b6b',
+    color: '#c0392b',
     textAlign: 'center',
-    padding: 16,
-    backgroundColor: '#fff5f5',
+    padding: 12,
+    backgroundColor: '#fdebeb',
     borderRadius: 8,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
+    fontWeight: '600',
   },
   title: {
-    marginBottom: 24,
-    fontSize: 20,
-    fontWeight: '600',
+    marginBottom: 5, 
+    fontSize: 24, 
+    fontWeight: '800', 
     textAlign: 'center',
-    color: '#000',
+    color: '#2c3e50', 
   },
-  subtitle: {
+  subtitlePeriod: { 
     fontSize: 14,
-    color: '#444',
-    fontWeight: 'normal',
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   loading: {
     opacity: 0.7,
@@ -271,48 +285,114 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 24,
-    marginTop: 24,
-    elevation: 2,
+    marginTop: 10,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
+    position: 'relative',
+    marginBottom: 20,
   },
-  warningText: {
-    color: '#ff6b6b',
-  },
-  summary: {
-    fontSize: 16,
+  summaryLabel: {
+    fontSize: 16, 
     textAlign: 'center',
-    fontWeight: '400',
-    color: '#000',
+    fontWeight: '500',
+    color: '#555',
+    marginBottom: 10,
   },
-  highlightText: {
-    color: '#000',
-    fontWeight: '600',
+  
+  totalHighlightContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end', 
+    justifyContent: 'center',
+    marginVertical: 5,
+  },
+  totalCount: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: '#4B8BF5',
+    lineHeight: 48, 
+  },
+  totalUnit: {
+    fontSize: 24, 
+    fontWeight: '600', 
+    color: '#4B8BF5',
+    marginBottom: 5, 
+    marginLeft: 5,
+    lineHeight: 24, 
+  },
+
+  warningText: {
+    color: '#e74c3c', 
   },
   warning: {
-    color: '#ff6b6b',
-    fontSize: 14,
+    color: '#c0392b',
+    fontSize: 13,
     textAlign: 'center',
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#fff5f5',
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#fff0f0',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#c0392b50',
+  },
+  detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: 25, 
+      borderTopWidth: 1,
+      borderTopColor: '#ecf0f1', 
+      paddingTop: 15,
+  },
+  detailBox: {
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      flex: 1, 
+  },
+  detailCountSuccess: {
+      fontSize: 28, 
+      fontWeight: '800',
+      color: '#28a745', 
+  },
+  detailCountFailed: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: '#dc3545', 
+  },
+  detailLabel: {
+      fontSize: 15, 
+      color: '#555',
+      marginTop: 5,
+      fontWeight: '600',
   },
   note: {
-    fontSize: 12,
-    color: '#444',
+    fontSize: 13, 
+    color: '#666',
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: 10,
     fontStyle: 'italic',
+  },
+  chartTitle: {
+      fontSize: 18, 
+      fontWeight: '700',
+      color: '#333',
+      textAlign: 'center',
+      marginBottom: 15, 
   },
   pieContainer: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 25,
     backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingVertical: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   }
 });
 

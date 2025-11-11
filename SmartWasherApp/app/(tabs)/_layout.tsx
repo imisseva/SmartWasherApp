@@ -2,6 +2,7 @@ import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect } from "react";
 import { useAuth } from "../../hooks/auth";
+// Không cần Platform nữa vì chúng ta không dùng position: 'absolute'
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -22,11 +23,31 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: "#999",
         tabBarStyle: {
           backgroundColor: "#fff",
-          borderTopWidth: 0.5,
-          borderTopColor: "#eee",
-          paddingBottom: 4,
-          height: 60,
+          borderTopWidth: 0, 
+          borderTopColor: "transparent",
+          
+          // ✅ Xóa position: 'absolute' và left/right để kéo dài toàn màn hình
+          
+          // Chiều cao và padding tối ưu để tránh Safe Zone
+          height: 80, 
+          paddingBottom: 15, 
+          paddingTop: 10,
+          
+          // Giữ bo tròn góc trên mềm mại
+          borderTopLeftRadius: 20, 
+          borderTopRightRadius: 20,
+          
+          // Shadow nhẹ để tách biệt khỏi nền
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 5,
+          elevation: 5,
         },
+        tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
+        }
       }}
     >
       <Tabs.Screen
@@ -47,7 +68,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* ✅ Tab thống kê mới */}
+      {/* Tab thống kê mới */}
       <Tabs.Screen
         name="StatisticalScreen"
         options={{
