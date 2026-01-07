@@ -2,6 +2,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import client from "../constants/api";
 import { WashHistory } from "../models/WashHistory";
 
+export interface MonthlyWashStats {
+  user_id: number;
+  username: string;
+  name: string;
+  free_washes: number;
+  paid_washes: number;
+  total_washes: number;
+}
+
+export interface MonthlyRevenueStats {
+  user_id: number;
+  username: string;
+  name: string;
+  total_revenue: number;
+}
+
 export const HistoryController = {
   async getUserHistory(): Promise<WashHistory[]> {
     try {
@@ -9,15 +25,15 @@ export const HistoryController = {
       if (!userData) throw new Error("Chưa đăng nhập");
       const user = JSON.parse(userData);
 
-      // Gọi endpoint /api/wash-history/:userId
+      // Gọi endpoint /api/history/:userId
       let res;
       try {
-        res = await client.get(`/api/wash-history/${user.id}`);
+        res = await client.get(`/api/history/${user.id}`);
       } catch (err: any) {
         // Fallback về query param nếu cần
         if (err.response && err.response.status === 404) {
           console.warn("⚠️ Thử fallback sang query param...");
-          res = await client.get(`/api/wash-history?user_id=${user.id}`);
+          res = await client.get(`/api/history?user_id=${user.id}`);
         } else {
           throw err;
         }
@@ -48,6 +64,32 @@ export const HistoryController = {
         console.error("❌ Lỗi khi thiết lập yêu cầu:", err.message);
       }
       return [];
+    }
+  },
+
+  async getMonthlyWashStats(year: number, month: number): Promise<MonthlyWashStats[]> {
+    try {
+      const res = await client.get(`/api/history/monthly/${year}/${month}`);
+      if (res.data.success && Array.isArray(res.data.data)) {
+        return res.data.data as MonthlyWashStats[];
+      }
+      return [];
+    } catch (err: any) {
+      console.error("❌ Lỗi khi lấy thống kê lượt giặt tháng:", err);
+      return [];
+    }
+  },
+
+  async getMonthlyRevenue(year: number, month: number): Promise<{ totalRevenue: number; data: MonthlyRevenueStats[] }> {
+    try {
+      const res = await client.get(`/api/history/revenue/${year}/${month}`);
+      if (res.data.success) {
+        return { totalRevenue: res.data.totalRevenue || 0, data: res.data.data || [] };
+      }
+      return { totalRevenue: 0, data: [] };
+    } catch (err: any) {
+      console.error("❌ Lỗi khi lấy doanh thu tháng:", err);
+      return { totalRevenue: 0, data: [] };
     }
   },
 };

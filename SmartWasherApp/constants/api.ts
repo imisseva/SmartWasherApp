@@ -1,8 +1,8 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// export const API_BASE_URL = "http://192.168.88.139:5000"; // ⚠️ đúng địa chỉ IP máy chạy Node
-export const API_BASE_URL = "https://smartwasherserver-production.up.railway.app"; // ⚠️ đúng địa chỉ IP máy chạy Node
+export const API_BASE_URL = "http://192.168.1.16:5000"; // ⚠️ đúng địa chỉ IP máy chạy Node
+// export const API_BASE_URL = "https://smartwasherserver.onrender.com/"; // ⚠️ đúng địa chỉ IP máy chạy Node
 
 const client = axios.create({
   baseURL: API_BASE_URL,
