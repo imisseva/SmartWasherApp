@@ -33,6 +33,7 @@ export default function AdminDashboard() {
   const goUsers = () => router.push("/admin/users" as Href);
   const goWashers = () => router.push("/admin/washers" as Href);
   const goRevenue = () => router.push("/admin/revenue" as Href);
+  const goMonthlyWash = () => router.push("/admin/monthly-wash" as Href);
 
   const logout = async () => {
     await signOut();
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
             <DashButton icon="people-outline" label="Người dùng" onPress={goUsers} />
             <DashButton icon="hardware-chip-outline" label="Máy giặt" onPress={goWashers} />
             <DashButton icon="bar-chart-outline" label="Doanh thu" onPress={goRevenue} />
+            <DashButton icon="stats-chart-outline" label="Lượt giặt tháng" onPress={goMonthlyWash} />
           </View>
         </ScrollView>
       </View>

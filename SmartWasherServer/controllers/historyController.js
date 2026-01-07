@@ -212,6 +212,64 @@ export const HistoryController = {
       res.status(500).json({ success: false, message: "Lỗi server" });
     }
   },
+
+  async getMonthlyWashStats(req, res) {
+    const { year, month } = req.params;
+    try {
+      const sql = `
+        SELECT 
+          u.id AS user_id,
+          a.username,
+          u.name,
+          COUNT(CASE WHEN h.cost IS NULL OR h.cost = 0 THEN 1 END) AS free_washes,
+          COUNT(CASE WHEN h.cost > 0 THEN 1 END) AS paid_washes,
+          COUNT(*) AS total_washes
+        FROM user u
+        JOIN account a ON a.id = u.account_id
+        LEFT JOIN wash_history h ON h.user_id = u.id 
+          AND YEAR(h.requested_at) = ? 
+          AND MONTH(h.requested_at) = ?
+        GROUP BY u.id, a.username, u.name
+        ORDER BY total_washes DESC, a.username ASC
+      `;
+      const [rows] = await db.execute(sql, [year, month]);
+
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error("❌ Lỗi truy vấn thống kê lượt giặt tháng:", err);
+      res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+  },
+
+  async getMonthlyRevenue(req, res) {
+    const { year, month } = req.params;
+    try {
+      const sql = `
+        SELECT 
+          u.id AS user_id,
+          a.username,
+          u.name,
+          SUM(CASE WHEN h.cost > 0 THEN h.cost ELSE 0 END) AS total_revenue
+        FROM user u
+        JOIN account a ON a.id = u.account_id
+        LEFT JOIN wash_history h ON h.user_id = u.id 
+          AND YEAR(h.requested_at) = ? 
+          AND MONTH(h.requested_at) = ?
+        GROUP BY u.id, a.username, u.name
+        HAVING total_revenue > 0
+        ORDER BY total_revenue DESC, a.username ASC
+      `;
+      const [rows] = await db.execute(sql, [year, month]);
+
+      // Tính tổng doanh thu
+      const totalRevenue = rows.reduce((sum, row) => sum + parseFloat(row.total_revenue || 0), 0);
+
+      res.json({ success: true, totalRevenue, data: rows });
+    } catch (err) {
+      console.error("❌ Lỗi truy vấn doanh thu tháng:", err);
+      res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+  },
   async createWashHistory(req, res) {
     try {
       const { user_id, washer_id, cost } = req.body;

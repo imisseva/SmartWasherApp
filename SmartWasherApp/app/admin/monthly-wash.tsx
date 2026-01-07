@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   RefreshControl,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -11,21 +12,19 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { HistoryController, MonthlyRevenueStats } from "../../controllers/HistoryController";
+import { HistoryController, MonthlyWashStats } from "../../controllers/HistoryController";
 
-export default function RevenueScreen() {
+export default function MonthlyWashScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [list, setList] = useState<MonthlyRevenueStats[]>([]);
+  const [list, setList] = useState<MonthlyWashStats[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const load = useCallback(async () => {
-    const data = await HistoryController.getMonthlyRevenue(selectedYear, selectedMonth);
-    setTotalRevenue(data.totalRevenue);
-    setList(data.data);
+    const data = await HistoryController.getMonthlyWashStats(selectedYear, selectedMonth);
+    setList(data);
   }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
@@ -34,7 +33,7 @@ export default function RevenueScreen() {
         setLoading(true);
         await load();
       } catch {
-        Alert.alert("Lỗi", "Không lấy được doanh thu.");
+        Alert.alert("Lỗi", "Không lấy được thống kê lượt giặt.");
       } finally {
         setLoading(false);
       }
@@ -61,13 +60,17 @@ export default function RevenueScreen() {
     setSelectedMonth(newMonth);
   };
 
-  const renderItem = ({ item }: { item: MonthlyRevenueStats }) => (
+  const renderItem = ({ item }: { item: MonthlyWashStats }) => (
     <View style={styles.row}>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{item.username}</Text>
         <Text style={styles.rowSub}>{item.name || "-"}</Text>
+        <View style={styles.stats}>
+          <Text style={styles.statText}>Miễn phí: {item.free_washes}</Text>
+          <Text style={styles.statText}>Có phí: {item.paid_washes}</Text>
+          <Text style={styles.statText}>Tổng: {item.total_washes}</Text>
+        </View>
       </View>
-      <Text style={styles.revenueText}>{item.total_revenue.toLocaleString()} VND</Text>
     </View>
   );
 
@@ -86,28 +89,27 @@ export default function RevenueScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Ionicons
-          name="chevron-back"
-          size={24}
-          color="#1f2a44"
+        <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
-        />
-        <Text style={styles.headerTitle}>Doanh thu</Text>
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1f2a44" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Lượt giặt tháng</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.monthSelector}>
-        <Ionicons name="chevron-back" size={20} color="#1f2a44" onPress={() => changeMonth(-1)} />
+        <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.monthBtn}>
+          <Ionicons name="chevron-back" size={20} color="#1f2a44" />
+        </TouchableOpacity>
         <Text style={styles.monthText}>
           {selectedMonth}/{selectedYear}
         </Text>
-        <Ionicons name="chevron-forward" size={20} color="#1f2a44" onPress={() => changeMonth(1)} />
-      </View>
-
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalLabel}>Tổng doanh thu</Text>
-        <Text style={styles.totalAmount}>{totalRevenue.toLocaleString()} VND</Text>
+        <TouchableOpacity onPress={() => changeMonth(1)} style={styles.monthBtn}>
+          <Ionicons name="chevron-forward" size={20} color="#1f2a44" />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -120,7 +122,7 @@ export default function RevenueScreen() {
         renderItem={renderItem}
         ListEmptyComponent={
           <Text style={{ padding: 16, textAlign: "center", color: "#555" }}>
-            Chưa có doanh thu cho tháng này.
+            Chưa có dữ liệu lượt giặt cho tháng này.
           </Text>
         }
       />
@@ -162,30 +164,19 @@ const styles = StyleSheet.create({
     borderBottomColor: "hsl(231, 62%, 94%)",
     borderBottomWidth: 1,
   },
+  monthBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: "#f2f4ff",
+  },
   monthText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1f2a44",
     marginHorizontal: 20,
-  },
-  totalContainer: {
-    backgroundColor: "#fff",
-    margin: 16,
-    padding: 20,
-    borderRadius: 14,
-    alignItems: "center",
-    borderColor: "hsl(231, 62%, 94%)",
-    borderWidth: 1,
-  },
-  totalLabel: {
-    fontSize: 16,
-    color: "#6b7280",
-    marginBottom: 8,
-  },
-  totalAmount: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#0b8650",
   },
   row: {
     backgroundColor: "#fff",
@@ -194,14 +185,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderColor: "hsl(231, 62%, 94%)",
     borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
   },
   rowTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
   rowSub: { marginTop: 4, color: "#4b5563" },
-  revenueText: {
-    fontSize: 16,
-    fontWeight: "700",
+  stats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  statText: {
+    fontSize: 14,
+    fontWeight: "600",
     color: "#0b8650",
   },
 });

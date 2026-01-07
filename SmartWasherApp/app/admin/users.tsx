@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"; // ✅
+import { SafeAreaView } from "react-native-safe-area-context"; // ✅
 import { Ionicons } from "@expo/vector-icons";
 import {
   UserController,
@@ -25,7 +25,6 @@ import client from "../../constants/api";
 
 export default function UsersScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // ✅ Lấy giá trị safe area
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [list, setList] = useState<AdminUserVM[]>([]);
@@ -153,12 +152,7 @@ export default function UsersScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* ✅ Header nằm trong vùng safe area */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + 6 }, // chừa tai thỏ
-        ]}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
@@ -246,6 +240,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 12,
     paddingBottom: 10,
+    paddingTop: 6,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

@@ -10,6 +10,12 @@ router.get("/last/:washer_id", HistoryController.getLastWashHistory);
 // Route này phải đặt sau các route cụ thể
 router.get("/:userId", HistoryController.getUserHistory);
 
+// Thống kê lượt giặt theo tháng
+router.get("/monthly/:year/:month", HistoryController.getMonthlyWashStats);
+
+// Doanh thu theo tháng
+router.get("/revenue/:year/:month", HistoryController.getMonthlyRevenue);
+
 // POST /api/wash-history used by client to save a wash record
 // We mount this route on the main app as a top-level path, so create a small compatibility route
 router.post("/create", HistoryController.createWashHistory);
