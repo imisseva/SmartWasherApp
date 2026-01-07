@@ -123,7 +123,7 @@ export const WasherController = {
 
     // 3️⃣ Gửi lịch sử lên server
     try {
-      const res = await client.post("/api/wash-history", {
+      const res = await client.post("/api/history", {
         user_id: user.id,
         washer_id: washer.id,
         cost: totalCost,
@@ -205,7 +205,7 @@ export const WasherController = {
 
   async getLastWashHistory(washer_id: number): Promise<WashHistory | null> {
     try {
-      const res = await client.get(`/api/wash-history/last/${washer_id}`);
+      const res = await client.get(`/api/history/last/${washer_id}`);
       // Server will include status/notes only if the DB has those columns; keep them optional
       if (res.data?.success && res.data?.history) {
         return res.data.history;
