@@ -82,7 +82,7 @@ app.post('/api/test/reset-washes', verifyToken, requireAdmin, async (req, res) =
 });
 
 // ✅ Compatibility: cũ
-app.post("/api/wash-history", HistoryController.createWashHistory);
+app.post("/api/history", HistoryController.createWashHistory);
 app.post("/api/register", register);
 
 // Cron job chạy vào 00:00 mỗi thứ 2 (ngày thứ 1 trong tuần)

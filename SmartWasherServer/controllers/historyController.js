@@ -18,9 +18,9 @@ export const HistoryController = {
         "h.user_id",
         "h.washer_id",
         "h.cost",
-        "DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') as requested_at",
-        "DATE_FORMAT(h.start_time, '%Y-%m-%d %H:%i') as start_time",
-        "DATE_FORMAT(h.end_time, '%Y-%m-%d %H:%i') as end_time",
+        "DATE_FORMAT(CONVERT_TZ(h.requested_at, '+00:00', '+07:00'), '%Y-%m-%d %H:%i') as requested_at",
+        "DATE_FORMAT(CONVERT_TZ(h.start_time, '+00:00', '+07:00'), '%Y-%m-%d %H:%i') as start_time",
+        "DATE_FORMAT(CONVERT_TZ(h.end_time, '+00:00', '+07:00'), '%Y-%m-%d %H:%i') as end_time",
       ];
       if (hasStatus) selectCols.push("h.status");
       if (hasNotes) selectCols.push("h.notes");
@@ -190,7 +190,7 @@ export const HistoryController = {
           h.user_id,
           h.washer_id,
           w.name AS machineName,
-          DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') AS date,
+          DATE_FORMAT(CONVERT_TZ(h.requested_at, '+00:00', '+07:00'), '%Y-%m-%d %H:%i') AS date,
           h.cost,
           CASE 
             WHEN h.status = 'refunded' THEN 'Hoàn tiền'

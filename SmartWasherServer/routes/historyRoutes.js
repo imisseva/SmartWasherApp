@@ -16,7 +16,7 @@ router.get("/monthly/:year/:month", HistoryController.getMonthlyWashStats);
 // Doanh thu theo tháng
 router.get("/revenue/:year/:month", HistoryController.getMonthlyRevenue);
 
-// POST /api/wash-history used by client to save a wash record
+// POST /api/history used by client to save a wash record
 // We mount this route on the main app as a top-level path, so create a small compatibility route
 router.post("/create", HistoryController.createWashHistory);
 
